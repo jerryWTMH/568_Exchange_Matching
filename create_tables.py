@@ -1,49 +1,45 @@
-import psycopg2
-from config import config
-
 
 def create_tables():
-    """ create tables in the PostgreSQL database"""
     commands = (
         """
-        CREATE TABLE ACCOUNTS(
+        CREATE TABLE ACCOUNT(
             account_id SERIAL PRIMARY KEY,
             balance DOUBLE PRECISION NOT NULL 
         )
         """,
-        """ 
-        CREATE TABLE ORDERS(
-            order_id SERIAL PRIMARY KEY,
-            account_id INTEGER NOT NULL
-            FOREIGN KEY(account_id)
-                REFERENCES ACCOUNTS(account_id)
-                ON UPDATE CASCADE ON DELETE CASCADE,
-            sym VARCHAR(128) NOT NULL,
-            amount INTEGER NOT NULL,
-            limit INTEGER NOT NULL
+        """
+        CREATE TABLE POSITION(
+            position_id SERIAL PRIMARY KEY,
+            account_id INTEGER NOT NULL,
+            symbol VARCHAR(128) NOT NULL,
+            shares INTEGER NOT NULL,
+            FOREIGN KEY (account_id) REFERENCES ACCOUNT (account_id) ON UPDATE CASCADE ON DELETE CASCADE
         )
         """,
+        """ 
+        CREATE TABLE TRANSACTION(
+            transaction_id SERIAL PRIMARY KEY,
+            account_id INTEGER NOT NULL,              
+            create_time TIME NOT NULL,
+            alive BOOL NOT NULL,
+            amount INTEGER NOT NULL,
+            limitation INTEGER NOT NULL,
+            symbol VARCHAR(128) NOT NULL,
+            FOREIGN KEY (account_id) REFERENCES ACCOUNT (account_id) ON UPDATE CASCADE ON DELETE CASCADE
+        )
+        """,
+        """
+        CREATE TABLE HISTORY(
+            history_id SERIAL PRIMARY KEY,
+            account_id INTEGER NOT NULL,
+            transaction_id INTEGER NOT NULL,               
+            status VARCHAR(128) NOT NULL,
+            history_time TIME NOT NULL,
+            history_shares INTEGER NOT NULL,
+            price INTEGER,
+            FOREIGN KEY (account_id) REFERENCES ACCOUNT (account_id) ON UPDATE CASCADE ON DELETE CASCADE,
+            FOREIGN KEY (transaction_id)  REFERENCES TRANSACTION (transaction_id) ON UPDATE CASCADE ON DELETE CASCADE
+        )
+        """
     )
-    conn = None
-    try:
-        # read the connection parameters
-        params = config()
-        # connect to the PostgreSQL server
-        conn = psycopg2.connect(**params)
-        cur = conn.cursor()
-        # create table one by one
-        for command in commands:
-            cur.execute(command)
-        # close communication with the PostgreSQL database server
-        cur.close()
-        # commit the changes
-        conn.commit()
-    except (Exception, psycopg2.DatabaseError) as error:
-        print(error)
-    finally:
-        if conn is not None:
-            conn.close()
-
-
-if __name__ == '__main__':
-    create_tables()
+    return commands
