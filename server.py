@@ -1,61 +1,14 @@
 import psycopg2
 from configparser import ConfigParser
+from create_tables import create_tables
 import socket
 
-HOST = "127.0.0.1"  # Standard loopback interface address (localhost)
-PORT = 65432  # Port to listen on (non-privileged ports are > 1023)
-addr = (HOST, PORT)
 
-def init_database():
-    commands = (
-        """
-        CREATE TABLE ACCOUNT(
-            account_id SERIAL PRIMARY KEY,
-            balance DOUBLE PRECISION NOT NULL 
-        )
-        """,
-        """
-        CREATE TABLE POSITION(
-            position_id SERIAL PRIMARY KEY,
-            account_id INTEGER NOT NULL,
-            symbol VARCHAR(128) NOT NULL,
-            shares INTEGER NOT NULL,
-            FOREIGN KEY (account_id) REFERENCES ACCOUNT (account_id) ON UPDATE CASCADE ON DELETE CASCADE
-        )
-        """,
-        """ 
-        CREATE TABLE TRANSACTION(
-            transaction_id SERIAL PRIMARY KEY,
-            account_id INTEGER NOT NULL,              
-            create_time TIME NOT NULL,
-            alive BOOL NOT NULL,
-            amount INTEGER NOT NULL,
-            limitation INTEGER NOT NULL,
-            symbol VARCHAR(128) NOT NULL,
-            FOREIGN KEY (account_id) REFERENCES ACCOUNT (account_id) ON UPDATE CASCADE ON DELETE CASCADE
-        )
-        """,
-        """
-        CREATE TABLE HISTORY(
-            history_id SERIAL PRIMARY KEY,
-            account_id INTEGER NOT NULL,
-            transaction_id INTEGER NOT NULL,               
-            status VARCHAR(128) NOT NULL,
-            history_time TIME NOT NULL,
-            history_shares INTEGER NOT NULL,
-            price INTEGER,
-            FOREIGN KEY (account_id) REFERENCES ACCOUNT (account_id) ON UPDATE CASCADE ON DELETE CASCADE,
-            FOREIGN KEY (transaction_id)  REFERENCES TRANSACTION (transaction_id) ON UPDATE CASCADE ON DELETE CASCADE
-        )
-        """
-    )
-    return commands
+def drop_table():
+    drops = "DROP TABLE POSITION; DROP TABLE HISTORY; DROP TABLE TRANSACTION; DROP TABLE ACCOUNT; "
+    return drops
 
-###
-# FOREIGN KEY (account_id) REFERENCES ACCOUNT (account_id) ON UPDATE CASCADE ON DELETE CASCADE,
-# FOREIGN KEY (order_id)  REFERENCES ORDER (order_id) ON UPDATE CASCADE ON DELETE CASCADE
-
-def connect(commands):
+def connect(drops, commands):
     """ Connect to the PostgreSQL database server """
     conn = None
     try:
@@ -70,10 +23,34 @@ def connect(commands):
         # create a cursor
         cur = conn.cursor()
 
+        # drop the table
+        cur.execute(drops)   
+    
         # create table one by one
         for command in commands:
             cur.execute(command)
-       
+        
+        # sql = "INSERT INTO ACCOUNT(account_id, balance) VALUES(28, 1000000);"
+        # cur.execute(sql)
+
+        print("start socket")
+        serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # bind the socket to a public host, and a well-known port
+        serversocket.bind(("", 12345))
+        # become a server socket
+        serversocket.listen(2)
+        # accept connections from outside
+        while True:
+            (clientsocket, address) = serversocket.accept()
+            result = clientsocket.recv(1024).decode()
+            if(result == ""):
+                break
+            cur.execute(result)
+            print(result)
+        serversocket.close()
+        print("close socket")
+
+
 	    # close the communication with the PostgreSQL
         cur.close()
         # commit the changes
@@ -87,6 +64,7 @@ def connect(commands):
             print('Database connection closed.')
 
 if __name__ == '__main__':
-    commands = init_database()
-    connect(commands)
+    drops = drop_table()
+    commands = create_tables()
+    connect(drops, commands)
 
