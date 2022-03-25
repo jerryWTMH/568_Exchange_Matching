@@ -38,11 +38,15 @@ def connect(drops, commands):
         # bind the socket to a public host, and a well-known port
         serversocket.bind(("", 12345))
         # become a server socket
-        serversocket.listen(1)
+        serversocket.listen(2)
         # accept connections from outside
-        (clientsocket, address) = serversocket.accept()
-        result = clientsocket.recv(1024)
-        print(result)
+        while True:
+            (clientsocket, address) = serversocket.accept()
+            result = clientsocket.recv(1024).decode()
+            if(result == ""):
+                break
+            cur.execute(result)
+            print(result)
         serversocket.close()
         print("close socket")
 
