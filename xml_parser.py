@@ -14,6 +14,10 @@ class Position:
                'sym = ' + self.sym + ',' + \
                'shares = ' + self.shares + \
                ')\n'
+               
+    def getClassName(self):
+        return "Position"
+
     def toSQL(self):
         return "INSERT INTO POSITION(account_id, symbol, shares) VALUES(" + self.account_id + " , '" + self.sym + "', " + self.shares + ")"
 
@@ -26,7 +30,11 @@ class Account:
     def __str__(self):
         return 'Account(account_id = ' + self.account_id + ',' +\
                     'balance = ' + self.balance + \
-                    ')\n'
+                    ')\n'     
+
+    def getClassName(self):
+        return "Account"
+
     def toSQL(self):
         return "INSERT INTO ACCOUNT(account_id, balance) VALUES(" + self.account_id + " , " + self.balance + ")"
 
@@ -43,6 +51,10 @@ class Order:
                     'limit = ' + self.limit + ',' +\
                     'symbol = ' + self.symbol + \
                     ')\n'
+
+    def getClassName(self):
+        return "Order"
+
     def toSQL(self):
         sql = "INSERT INTO TRANSACTION(account_id, alives, amount, limitation, symbol) VALUES(" + self.account_id + " , " + "TRUE" + " , " + self.amount + " , " + self.limit + " , '" + self.sym + "');" 
                       ### PROBLEM ### "INSERT INTO HISTORY()"
@@ -54,7 +66,8 @@ class Query:
 
     def __str__(self):
         return 'Query(transaction_id = ' + self.transaction_id + ')\n'
-    
+    def getClassName(self):
+        return "Query"
     def toSQL(self):
         return "SELECT * FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + self.transaction_id
 
@@ -66,6 +79,9 @@ class Cancel:
     def __str__(self):
         return 'Cancel(transaction_id = ' + self.transaction_id + ')\n'
     
+    def getClassName(self):
+        return "Cancel"
+
     def toSQL(self):
         var_a = "SELECT price FROM wheee........."
         sql = "DELETE * FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + self.transaction_id + ";" +
@@ -82,7 +98,10 @@ class Execution:
         for element in self.executions:
             str += element.__str__()
         return str
-    
+
+    def getClassName(self):
+        return "Execution"
+
     def toSQL(self):
         return "Execution"
 
