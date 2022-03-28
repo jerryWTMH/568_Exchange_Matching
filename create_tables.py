@@ -20,7 +20,7 @@ def create_tables():
         CREATE TABLE TRANSACTION(
             transaction_id SERIAL PRIMARY KEY,
             account_id INTEGER NOT NULL,              
-            create_time TIME NOT NULL,
+            create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             alive BOOL NOT NULL,
             amount INTEGER NOT NULL,
             limitation INTEGER NOT NULL,
@@ -34,7 +34,7 @@ def create_tables():
             account_id INTEGER NOT NULL,
             transaction_id INTEGER NOT NULL,               
             status VARCHAR(128) NOT NULL,
-            history_time TIME NOT NULL,
+            history_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             history_shares INTEGER NOT NULL,
             price INTEGER,
             FOREIGN KEY (account_id) REFERENCES ACCOUNT (account_id) ON UPDATE CASCADE ON DELETE CASCADE,

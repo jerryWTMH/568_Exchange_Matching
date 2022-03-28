@@ -3,13 +3,20 @@ from configparser import ConfigParser
 from create_tables import create_tables
 import socket
 
+from xml_parser import parse_xml
+
+
+
 
 def drop_table():
     drops = "DROP TABLE POSITION; DROP TABLE HISTORY; DROP TABLE TRANSACTION; DROP TABLE ACCOUNT; "
     return drops
+    
+
 
 def connect(drops, commands):
     """ Connect to the PostgreSQL database server """
+
     conn = None
     try:
         # connect to the PostgreSQL server
@@ -45,8 +52,13 @@ def connect(drops, commands):
             result = clientsocket.recv(1024).decode()
             if(result == ""):
                 break
-            cur.execute(result)
-            print(result)
+
+            executions = parse_xml(result)
+            for execution in executions.executions:       
+                print(execution.toSQL())
+                cur.execute(execution.toSQL())
+            
+
         serversocket.close()
         print("close socket")
 
@@ -66,5 +78,6 @@ def connect(drops, commands):
 if __name__ == '__main__':
     drops = drop_table()
     commands = create_tables()
+
     connect(drops, commands)
 

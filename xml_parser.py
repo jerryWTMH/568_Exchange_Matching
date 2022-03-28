@@ -14,6 +14,8 @@ class Position:
                'sym = ' + self.sym + ',' + \
                'shares = ' + self.shares + \
                ')\n'
+    def toSQL(self):
+        return "INSERT INTO POSITION(account_id, symbol, shares) VALUES(" + self.account_id + " , '" + self.sym + "', " + self.shares + ")"
 
 
 class Account:
@@ -25,7 +27,8 @@ class Account:
         return 'Account(account_id = ' + self.account_id + ',' +\
                     'balance = ' + self.balance + \
                     ')\n'
-
+    def toSQL(self):
+        return "INSERT INTO ACCOUNT(account_id, balance) VALUES(" + self.account_id + " , " + self.balance + ")"
 
 class Order:
     def __init__(self, account_id, amount, limit, symbol):
@@ -40,6 +43,9 @@ class Order:
                     'limit = ' + self.limit + ',' +\
                     'symbol = ' + self.symbol + \
                     ')\n'
+    def toSQL(self):
+        sql = "INSERT INTO TRANSACTION(account_id, alives, amount, limitation, symbol) VALUES(" + self.account_id + " , " + "TRUE" + " , " + self.amount + " , " + self.limit + " , '" + self.sym + "');" 
+                      ### PROBLEM ### "INSERT INTO HISTORY()"
 
 
 class Query:
@@ -48,6 +54,9 @@ class Query:
 
     def __str__(self):
         return 'Query(transaction_id = ' + self.transaction_id + ')\n'
+    
+    def toSQL(self):
+        return "SELECT * FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + self.transaction_id
 
 
 class Cancel:
@@ -56,6 +65,11 @@ class Cancel:
 
     def __str__(self):
         return 'Cancel(transaction_id = ' + self.transaction_id + ')\n'
+    
+    def toSQL(self):
+        var_a = "SELECT price FROM wheee........."
+        sql = "DELETE * FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + self.transaction_id + ";" +
+            ### PROBLEM ### "INSERT INTO HISTORY(transaction_id, status, history_shares, price) VALUES(" +  transaction_id + " , '" + "cancel" + "' , " + var_a +  
 
 
 class Execution:
@@ -63,10 +77,14 @@ class Execution:
         self.executions = []
 
     def __str__(self):
-        str = "Display Excecution!\n"
+        # str = "Display Excecution!\n"
+        str = ""
         for element in self.executions:
             str += element.__str__()
         return str
+    
+    def toSQL(self):
+        return "Execution"
 
 
 def parse_xml(recv_string):
@@ -131,7 +149,7 @@ if __name__ == '__main__':
     transaction_string = "<transactions id=\"123456\">" \
                             "<order sym=\"SPY\" amount=\"123\" limit=\"321\"/>" \
                             "<query id=\"1\"/>" \
-                            "<cancel id=\"2\"/>" \
+                            "<cancel id=\"1\"/>" \
                           "</transactions> "
     transaction_execution = parse_xml(transaction_string)
     print(transaction_execution)
