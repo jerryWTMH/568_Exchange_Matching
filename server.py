@@ -16,23 +16,51 @@ def server_handler(executions, cur):
     # The problem that should be handled:
     # 1. Invalid order (ex: account doesn't exist; amount is higher than the balance;)
     # 2. Some parameters of Order and Cancel should be gotten by SQL first
+    # 3. Transaction id should exist in every command.
     # If there is an error in current execution, it would generate the XML for <error>, and put the error message inside of the XML.
     # If there is no error in current execution, it would call the toSQL() of the Class, and then generate the XML for the response message.
     # This would return XML that is corresponding to the input from the client. 
+    return_executions = ""
     for execution in executions.executions:
+        sql = ""
         error = ""
         className = execution.getClassName()
         if(className == "Order"):
+            ### need to check whether valid or not
             try:
-                sql = "SELECT account_id FROM ACCOUNT WHERE account_id = " + execution.account_id
+                sql = "SELECT account_id FROM ACCOUNT WHERE account_id = " + execution.account_id + ";"
                 cur.execute(sql)
-                sql = "SELECT ammount"
+                sql = "SELECT balance FROM ACCOUNT WHERE account_id = " + execution.account_id + ";"
+                curr_balance = cur.execute(sql)
+                if(curr_balance < execution.limit):
+                    error = "The limitation of the order is higher than your balance!"
+
+                ### if there is not errorin current execution: call toSQL()
+                sql = sql + execution.toSQL()
+                
             except (Exception, psycopg2.DatabaseError) as err:
                 error = err     
                 print(error)
-                
+        if(className == "ACCOUNT"):
+            ### need to check whether valid or not
+            ### if there is not errorin current execution: call toSQL()
+            sql = sql + execution.toSQL()
+        if(className == "POSITION"):
+            ### need to check whether valid or not
+            ### if there is not errorin current execution: call toSQL()
+            sql = sql + execution.toSQL()
+        if(className == "QUERY"):
+            ### need to check whether valid or not
+            ### if there is not errorin current execution: call toSQL()
+            sql = sql + execution.toSQL()
+        if(className == "CANCEL"):
+            ### need to check whether valid or not
+            ### if there is not errorin current execution: call toSQL()
+            sql = sql + execution.toSQL()
+        cur.execute(sql)
+        # try to add some XML information to return_executions         
             
-    return executions
+    return return_executions
 
 
 def connect(drops, commands):
