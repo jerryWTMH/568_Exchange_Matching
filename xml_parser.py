@@ -1,6 +1,7 @@
 from io import BytesIO
 
 from lxml import etree
+import psycopg2
 
 
 class Position:
@@ -18,8 +19,11 @@ class Position:
     def getClassName(self):
         return "Position"
 
-    def toSQL(self):
-        return "INSERT INTO POSITION(account_id, symbol, shares) VALUES(" + self.account_id + " , '" + self.sym + "', " + self.shares + ")"
+    def toSQL(self, conn):
+        sql = "INSERT INTO POSITION(account_id, symbol, shares) VALUES(" + self.account_id + " , '" + self.sym + "', " + self.shares + ")"
+        cur = conn.cursor()
+        cur.execute(sql)
+        conn.commit()
 
 
 class Account:
@@ -35,8 +39,11 @@ class Account:
     def getClassName(self):
         return "Account"
 
-    def toSQL(self):
-        return "INSERT INTO ACCOUNT(account_id, balance) VALUES(" + self.account_id + " , " + self.balance + ")"
+    def toSQL(self, conn):
+        sql = "INSERT INTO ACCOUNT(account_id, balance) VALUES(" + self.account_id + " , " + self.balance + ")"
+        cur = conn.cursor()
+        cur.execute(sql)
+        conn.commit()
 
 class Order:
     def __init__(self, account_id, amount, limit, symbol):
@@ -55,9 +62,18 @@ class Order:
     def getClassName(self):
         return "Order"
 
-    def toSQL(self):
+    def toSQL(self, conn):
         sql = "INSERT INTO TRANSACTION(account_id, alives, amount, limitation, symbol) VALUES(" + self.account_id + " , " + "TRUE" + " , " + self.amount + " , " + self.limit + " , '" + self.sym + "');" 
-                      ### PROBLEM ### "INSERT INTO HISTORY()"
+        cur = conn.cursor()
+        cur.execute(sql)
+
+        sql = "SELECT currval(pg_get_serial_sequence('TRANSACTION','transaction_id'));"
+        curr_transaction_id = cur.execute(sql)
+        ### At the mean time, we need to add new order into HISTORY!
+        sql = "INSERT INTO HISTORY(transaction_id, account_id, status, history_shares, price, symbol) VALUES(" + curr_transaction_id + " , " + self.account_id + " , " + "TRUE" + " , " + self.amount + " , " + self.limit + " , " + self.sym + ");"
+        cur.execute(sql)
+        conn.commit()
+        
 
 
 class Query:
@@ -69,7 +85,10 @@ class Query:
     def getClassName(self):
         return "Query"
     def toSQL(self):
-        return "SELECT * FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + self.transaction_id
+        sql = "SELECT * FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + self.transaction_id
+        query_result = cur.execute(sql)
+        conn.commit()
+        print("This is what you query: " + query_result)
 
 
 class Cancel:
@@ -83,9 +102,15 @@ class Cancel:
         return "Cancel"
 
     def toSQL(self):
-        var_a = "SELECT price FROM wheee........."
-        sql = "DELETE * FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + self.transaction_id + ";" +
-            ### PROBLEM ### "INSERT INTO HISTORY(transaction_id, status, history_shares, price) VALUES(" +  transaction_id + " , '" + "cancel" + "' , " + var_a +  
+        account_id = cur.execute("SELECT account_id FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + self.transaction_id + ";")
+        history_shares = cur.execute("SELECT amount FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + self.transaction_id + ";")
+        price = cur.execute("SELECT limitation FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + self.transaction_id + ";")
+        symbol = cur.execute("SELECT symbol FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + self.transaction_id + ";")
+        sql = "UPDATE TRANSACTION SET alive = " + "FALSE" + "WHERE TRANSACTION.transaction_id = " + self.transaction_id + ";"
+        cur.execute(sql)
+        sql = "INSERT INTO HISTORY(transaction_id, account_id, status, history_shares, price, symbol) VALUES(" + self.transaction_id + " , " + account_id + " , " + "CANCEL" + " , " + history_shares + " , " + price + " , '" + symbol + "');"
+        cur.execute(sql)
+        conn.commit()
 
 
 class Execution:
