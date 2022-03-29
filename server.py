@@ -6,12 +6,28 @@ import socket
 from xml_parser import parse_xml
 
 
-
-
 def drop_table():
-    drops = "DROP TABLE POSITION; DROP TABLE HISTORY; DROP TABLE TRANSACTION; DROP TABLE ACCOUNT; "
+    drops = "DROP TABLE IF EXISTS POSITION; DROP TABLE IF EXISTS HISTORY; DROP TABLE IF EXISTS TRANSACTION; DROP TABLE IF EXISTS ACCOUNT; "
     return drops
-    
+
+
+class Buffer:
+    def __init__(self, sock):
+        self.sock = sock
+        self.buffer = b''
+
+    def get_content(self):
+        while b'\r\n' not in self.buffer:
+            data = self.sock.recv(1)
+            if not data:
+                return None
+            self.buffer += data
+        line, _, self.buffer = self.buffer.partition(b'\n')
+        byte_count = line.decode('utf-8')
+        data = self.sock.recv(int(byte_count))
+        return data.decode('utf-8')
+
+
 def server_handler(executions, cur):
     # The problem that should be handled:
     # 1. Invalid order (ex: account doesn't exist; amount is higher than the balance;)
@@ -41,19 +57,19 @@ def server_handler(executions, cur):
             except (Exception, psycopg2.DatabaseError) as err:
                 error = err     
                 print(error)
-        if(className == "ACCOUNT"):
+        if(className == "Account"):
             ### need to check whether valid or not
             ### if there is not errorin current execution: call toSQL()
             sql = sql + execution.toSQL()
-        if(className == "POSITION"):
+        if(className == "Position"):
             ### need to check whether valid or not
             ### if there is not errorin current execution: call toSQL()
             sql = sql + execution.toSQL()
-        if(className == "QUERY"):
+        if(className == "Query"):
             ### need to check whether valid or not
             ### if there is not errorin current execution: call toSQL()
             sql = sql + execution.toSQL()
-        if(className == "CANCEL"):
+        if(className == "Cancel"):
             ### need to check whether valid or not
             ### if there is not errorin current execution: call toSQL()
             sql = sql + execution.toSQL()
@@ -80,7 +96,7 @@ def connect(drops, commands):
         cur = conn.cursor()
 
         # drop the table
-        cur.execute(drops)   
+        cur.execute(drops)
     
         # create table one by one
         for command in commands:
@@ -93,9 +109,11 @@ def connect(drops, commands):
         # become a server socket
         serversocket.listen(2)
         # accept connections from outside
+        client_socket, address = serversocket.accept()
+        buffer = Buffer(client_socket)
+
         while True:
-            (clientsocket, address) = serversocket.accept()
-            result = clientsocket.recv(1024).decode()
+            result = buffer.get_content()
             if(result == ""):
                 break
 
@@ -114,7 +132,7 @@ def connect(drops, commands):
         cur.close()
         # commit the changes
         conn.commit()
-    except (Exception, psycopg2.DatabaseError) as error:     
+    except (Exception, psycopg2.DatabaseError) as error:
         print(error)
 
     finally:
