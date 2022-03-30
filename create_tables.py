@@ -37,6 +37,7 @@ def create_tables():
             history_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             history_shares INTEGER NOT NULL,
             price INTEGER,
+            symbol VARCHAR(128) NOT NULL,
             FOREIGN KEY (account_id) REFERENCES ACCOUNT (account_id) ON UPDATE CASCADE ON DELETE CASCADE,
             FOREIGN KEY (transaction_id)  REFERENCES TRANSACTION (transaction_id) ON UPDATE CASCADE ON DELETE CASCADE
         )

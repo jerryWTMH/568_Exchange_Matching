@@ -6,9 +6,9 @@ import socket
 from xml_parser import parse_xml
 
 
-def drop_table():
-    drops = "DROP TABLE IF EXISTS POSITION; DROP TABLE IF EXISTS HISTORY; DROP TABLE IF EXISTS TRANSACTION; DROP TABLE IF EXISTS ACCOUNT; "
-    return drops
+def drop_table(conn, cur):
+    drops = "DROP TABLE IF EXISTS POSITION CASCADE; DROP TABLE IF EXISTS HISTORY CASCADE; DROP TABLE IF EXISTS TRANSACTION CASCADE; DROP TABLE IF EXISTS ACCOUNT CASCADE; "
+    cur.execute(drops)
 
 
 class Buffer:
@@ -28,9 +28,7 @@ class Buffer:
         return data.decode('utf-8')
 
 
-
-
-def server_handler(executions, cur):
+def server_handler(executions, conn, cur):
     # The problem that should be handled:
     # 1. Invalid order (ex: account doesn't exist; amount is higher than the balance;)
     # 2. Some parameters of Order and Cancel should be gotten by SQL first
@@ -45,44 +43,69 @@ def server_handler(executions, cur):
         className = execution.getClassName()
         if(className == "Order"):
             ### need to check whether valid or not
-            try:
-                sql = "SELECT account_id FROM ACCOUNT WHERE account_id = " + execution.account_id + ";"
+            sql = "SELECT * FROM ACCOUNT WHERE EXISTS(SELECT account_id FROM ACCOUNT WHERE ACCOUNT.account_id = " + execution.account_id + ");"
+            cur.execute(sql)
+            if(cur.rowcount == 0):               
+                error = "The account_id doesn't exist!"
+                print("error occurs in Order! ", error)
+            else: 
+                account_id = execution.account_id
+                sql = "SELECT balance FROM ACCOUNT WHERE ACCOUNT.account_id = " + account_id + ";"
                 cur.execute(sql)
-                sql = "SELECT balance FROM ACCOUNT WHERE account_id = " + execution.account_id + ";"
-                curr_balance = cur.execute(sql)
-
-                if(curr_balance < execution.limit):
+                result = cur.fetchone()
+                if(result[0] < int(execution.limit)):
                     error = "The limitation of the order is higher than your balance!"
+                    print("error occurs in Order! ", error)
 
                 ### if there is not errorin current execution: call toSQL()
-                sql = sql + execution.toSQL()
-                
-            except (Exception, psycopg2.DatabaseError) as err:
-                error = err     
-                print(error)
+                if(error == ""):
+                    execution.toSQL(conn)                    
+                ##else:
+                    ##prepare xml error tag here
+
         if(className == "Account"):
-            ### need to check whether valid or not
-            ### if there is not errorin current execution: call toSQL()
-            sql = sql + execution.toSQL()
+            execution.toSQL(conn)
+            
         if(className == "Position"):
             ### need to check whether valid or not
+            sql = "SELECT account_id FROM ACCOUNT WHERE account_id = " + execution.account_id + ";"
+            cur.execute(sql)
+            if(cur.rowcount == 0):
+                error = "The account_id doesn't exist!"
+                print("error occurs in Position! ", error)
             ### if there is not errorin current execution: call toSQL()
-            sql = sql + execution.toSQL()
+            if(error == ""):
+                execution.toSQL(conn)
+
         if(className == "Query"):
             ### need to check whether valid or not
+            sql = "SELECT transaction_id FROM TRANSACTION WHERE transaction_id = " + execution.transaction_id + ";"
+            cur.execute(sql)
+            if(cur.rowcount == 0):
+                error = "The transaction_id doesn't exist!"
+                print("error occurs in Query! ", error)
             ### if there is not errorin current execution: call toSQL()
-            sql = sql + execution.toSQL()
+            if(error == ""):
+                execution.toSQL(conn)
+
         if(className == "Cancel"):
             ### need to check whether valid or not
+            sql = "SELECT transaction_id FROM TRANSACTION WHERE transaction_id = " + execution.transaction_id + ";"
+            cur.execute(sql)
+            if(cur.rowcount == 0):
+                error = "The transaction_id doesn't exist!"
+                print("error occurs in Cancel! ", error)
             ### if there is not errorin current execution: call toSQL()
-            sql = sql + execution.toSQL()
-        cur.execute(sql)
-        # try to add some XML information to return_executions         
-            
-    return return_executions
+            if(error == ""):
+                execution.toSQL(conn)                    
+            ##else:
+                ##prepare xml error tag here
+        # try to add some XML information to return_executions        
+    
+    # return return_executions
 
 
-def connect(drops, commands):
+def connect(commands):
     """ Connect to the PostgreSQL database server """
 
     conn = None
@@ -99,7 +122,7 @@ def connect(drops, commands):
         cur = conn.cursor()
 
         # drop the table
-        cur.execute(drops)
+        drop_table(conn, cur)
     
         # create table one by one
         for command in commands:
@@ -119,14 +142,15 @@ def connect(drops, commands):
             result = buffer.get_content()
             if(result == ""):
                 break
-
             executions = parse_xml(result)
+            print(executions)
             # Handler   
-            executions_new = server_handler(executions, cur)
-
-            # for execution in executions.executions:        
-            #     print(execution.toSQL())
-            #     cur.execute(execution.toSQL())
+            # executions_new = server_handler(executions, conn, cur)
+            server_handler(executions, conn, cur)
+            # for execution in executions.executions:   
+            #     print(execution)     
+                # print(execution.toSQL())
+                # cur.execute(execution.toSQL())
             
         serversocket.close()
         print("close socket")
@@ -144,8 +168,6 @@ def connect(drops, commands):
             print('Database connection closed.')
 
 if __name__ == '__main__':
-    drops = drop_table()
     commands = create_tables()
-
-    connect(drops, commands)
+    connect(commands)
 
