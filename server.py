@@ -28,6 +28,8 @@ class Buffer:
         return data.decode('utf-8')
 
 
+
+
 def server_handler(executions, cur):
     # The problem that should be handled:
     # 1. Invalid order (ex: account doesn't exist; amount is higher than the balance;)
@@ -48,6 +50,7 @@ def server_handler(executions, cur):
                 cur.execute(sql)
                 sql = "SELECT balance FROM ACCOUNT WHERE account_id = " + execution.account_id + ";"
                 curr_balance = cur.execute(sql)
+
                 if(curr_balance < execution.limit):
                     error = "The limitation of the order is higher than your balance!"
 
