@@ -9,25 +9,8 @@ from xml_parser import parse_xml
 
 
 def drop_table(conn, cur):
-    # sql = "SELECT COUNT(*) FROM ACCOUNT"
-    # if cur.execute(sql) != 0:
-    #     cur.execute("DROP TABLE ACCOUNT")
-    #     conn.commit()  
-    # sql = "SELECT COUNT(*) FROM POSITION"
-    # if cur.execute(sql) != 0:
-    #     cur.execute("DROP TABLE POSITION")
-    #     conn.commit()  
-    # sql = "SELECT COUNT(*) FROM TRANSACTION"
-    # if cur.execute(sql) != 0:
-    #     cur.execute("DROP TABLE TRANSACTION")
-    #     conn.commit()  
-    # sql = "SELECT COUNT(*) FROM HISTORY"
-    # if cur.execute(sql) != 0:
-    #     cur.execute("DROP TABLE HISTORY")
-    #     conn.commit()  
-    drops = "DROP TABLE POSITION; DROP TABLE HISTORY; DROP TABLE TRANSACTION; DROP TABLE ACCOUNT; "
+    drops = "DROP TABLE IF EXISTS POSITION CASCADE; DROP TABLE IF EXISTS HISTORY CASCADE; DROP TABLE IF EXISTS TRANSACTION CASCADE; DROP TABLE IF EXISTS ACCOUNT CASCADE; "
     cur.execute(drops)
-    conn.commit()
     
 def server_handler(executions, conn, cur):
     # The problem that should be handled:
@@ -45,58 +28,65 @@ def server_handler(executions, conn, cur):
         if(className == "Order"):
             ### need to check whether valid or not
             sql = "SELECT * FROM ACCOUNT WHERE EXISTS(SELECT account_id FROM ACCOUNT WHERE ACCOUNT.account_id = " + execution.account_id + ");"
-            bool_result = cur.execute(sql)
-            if(not bool_result):
+            cur.execute(sql)
+            if(cur.rowcount == 0):               
                 error = "The account_id doesn't exist!"
-            account_id = execution.account_id
-            print(error)
-            sql = "SELECT balance FROM ACCOUNT WHERE ACCOUNT.account_id = " + account_id + ";"
-            curr_balance = cur.execute(sql)
-            # print("curr_balance: " + curr_balance)
-            # print("execution.limit: " + execution.limit)
-            if(curr_balance < execution.limit):
-                error = "The limitation of the order is higher than your balance!"
+                print("error occurs in Order! ", error)
+            else: 
+                account_id = execution.account_id
+                sql = "SELECT balance FROM ACCOUNT WHERE ACCOUNT.account_id = " + account_id + ";"
+                cur.execute(sql)
+                result = cur.fetchone()
+                if(result[0] < int(execution.limit)):
+                    error = "The limitation of the order is higher than your balance!"
+                    print("error occurs in Order! ", error)
 
-            ### if there is not errorin current execution: call toSQL()
-            if(error == ""):
-                execution.toSQL(conn)                    
-            ##else:
-                ##prepare xml error tag here
+                ### if there is not errorin current execution: call toSQL()
+                if(error == ""):
+                    execution.toSQL(conn)                    
+                ##else:
+                    ##prepare xml error tag here
 
         if(className == "Account"):
             execution.toSQL(conn)
+            
 
         if(className == "Position"):
             ### need to check whether valid or not
-            sql = "SELECT * FROM ACCOUNT WHERE EXISTS(SELECT account_id FROM ACCOUNT WHERE account_id = " + execution.account_id + ");"
-            bool_result = cur.execute(sql)
+            sql = "SELECT account_id FROM ACCOUNT WHERE account_id = " + execution.account_id + ";"
+            cur.execute(sql)
+            if(cur.rowcount == 0):
+                error = "The account_id doesn't exist!"
+                print("error occurs in Position! ", error)
             ### if there is not errorin current execution: call toSQL()
             if(error == ""):
                 execution.toSQL(conn)
 
         if(className == "Query"):
             ### need to check whether valid or not
-            sql = "SELECT * FROM ACCOUNT WHERE EXISTS(SELECT account_id FROM ACCOUNT WHERE account_id = " + execution.account_id + ");"
-            bool_result = cur.execute(sql)
-            if(not bool_result):
-                error = "The account_id doesn't exist!"
+            sql = "SELECT transaction_id FROM TRANSACTION WHERE transaction_id = " + execution.transaction_id + ";"
+            cur.execute(sql)
+            if(cur.rowcount == 0):
+                error = "The transaction_id doesn't exist!"
+                print("error occurs in Query! ", error)
             ### if there is not errorin current execution: call toSQL()
             if(error == ""):
                 execution.toSQL(conn)
 
         if(className == "Cancel"):
             ### need to check whether valid or not
-            sql = "SELECT * FROM ACCOUNT WHERE EXISTS(SELECT account_id FROM ACCOUNT WHERE account_id = " + execution.account_id + ");"
-            bool_result = cur.execute(sql)
-            if(not bool_result):
-                error = "The account_id doesn't exist!"
+            sql = "SELECT transaction_id FROM TRANSACTION WHERE transaction_id = " + execution.transaction_id + ";"
+            cur.execute(sql)
+            if(cur.rowcount == 0):
+                error = "The transaction_id doesn't exist!"
+                print("error occurs in Cancel! ", error)
             ### if there is not errorin current execution: call toSQL()
             if(error == ""):
                 execution.toSQL(conn)                    
             ##else:
                 ##prepare xml error tag here
         # try to add some XML information to return_executions        
-            
+    
     # return return_executions
 
 
@@ -136,12 +126,12 @@ def connect(commands):
             if(result == ""):
                 break
             executions = parse_xml(result)
+            print(executions)
             # Handler   
             # executions_new = server_handler(executions, conn, cur)
             server_handler(executions, conn, cur)
-
-            for execution in executions.executions:   
-                print(execution)     
+            # for execution in executions.executions:   
+            #     print(execution)     
                 # print(execution.toSQL())
                 # cur.execute(execution.toSQL())
             

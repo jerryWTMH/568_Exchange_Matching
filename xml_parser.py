@@ -20,7 +20,8 @@ class Position:
         return "Position"
 
     def toSQL(self, conn):
-        sql = "INSERT INTO POSITION(account_id, symbol, shares) VALUES(" + self.account_id + " , '" + self.sym + "', " + self.shares + ")"
+        print("Inside of Position toSQL")
+        sql = "INSERT INTO POSITION(account_id, symbol, shares) VALUES(" + self.account_id + " , '" + self.sym + "', " + self.shares + ");"
         cur = conn.cursor()
         cur.execute(sql)
         conn.commit()
@@ -40,10 +41,10 @@ class Account:
         return "Account"
 
     def toSQL(self, conn):
-        sql = "INSERT INTO ACCOUNT(account_id, balance) VALUES(" + self.account_id + " , " + self.balance + ")"
+        print("Inside of Account toSQL")
+        sql = "INSERT INTO ACCOUNT(account_id, balance) VALUES(" + self.account_id + " , " + self.balance + ");"
         cur = conn.cursor()
         cur.execute(sql)
-        conn.commit()
 
 class Order:
     def __init__(self, account_id, amount, limit, symbol):
@@ -63,14 +64,17 @@ class Order:
         return "Order"
 
     def toSQL(self, conn):
-        sql = "INSERT INTO TRANSACTION(account_id, alives, amount, limitation, symbol) VALUES(" + self.account_id + " , " + "TRUE" + " , " + self.amount + " , " + self.limit + " , '" + self.sym + "');" 
+        print("Inside of Order toSQL")
+        sql = "INSERT INTO TRANSACTION(account_id, alive, amount, limitation, symbol) VALUES(" + self.account_id + " , " + "TRUE" + " , " + self.amount + " , " + self.limit + " , '" + self.symbol + "');" 
         cur = conn.cursor()
         cur.execute(sql)
 
         sql = "SELECT currval(pg_get_serial_sequence('TRANSACTION','transaction_id'));"
-        curr_transaction_id = cur.execute(sql)
+        cur.execute(sql)
+        result = cur.fetchone()
         ### At the mean time, we need to add new order into HISTORY!
-        sql = "INSERT INTO HISTORY(transaction_id, account_id, status, history_shares, price, symbol) VALUES(" + curr_transaction_id + " , " + self.account_id + " , " + "TRUE" + " , " + self.amount + " , " + self.limit + " , " + self.sym + ");"
+        sql = "INSERT INTO HISTORY(transaction_id, account_id, status, history_shares, price, symbol) VALUES(" + str(result[0]) + " , " + self.account_id + " , " + "TRUE" + " , " + self.amount + " , " + self.limit + " , '" + self.symbol + "');"
+        
         cur.execute(sql)
         conn.commit()
         
@@ -84,11 +88,13 @@ class Query:
         return 'Query(transaction_id = ' + self.transaction_id + ')\n'
     def getClassName(self):
         return "Query"
-    def toSQL(self):
-        sql = "SELECT * FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + self.transaction_id
+    def toSQL(self, conn):
+        print("Inside of Query toSQL")
+        sql = "SELECT * FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + str(self.transaction_id) + ";"
+        print(sql)
+        cur = conn.cursor()
         query_result = cur.execute(sql)
         conn.commit()
-        print("This is what you query: " + query_result)
 
 
 class Cancel:
@@ -101,14 +107,24 @@ class Cancel:
     def getClassName(self):
         return "Cancel"
 
-    def toSQL(self):
-        account_id = cur.execute("SELECT account_id FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + self.transaction_id + ";")
-        history_shares = cur.execute("SELECT amount FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + self.transaction_id + ";")
-        price = cur.execute("SELECT limitation FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + self.transaction_id + ";")
-        symbol = cur.execute("SELECT symbol FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + self.transaction_id + ";")
-        sql = "UPDATE TRANSACTION SET alive = " + "FALSE" + "WHERE TRANSACTION.transaction_id = " + self.transaction_id + ";"
+    def toSQL(self, conn):
+        print("Inside of Cancel toSQL")
+        cur = conn.cursor()
+        cur.execute("SELECT account_id FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + self.transaction_id + ";")
+        result = cur.fetchone()
+        account_id = result[0]
+        cur.execute("SELECT amount FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + self.transaction_id + ";")
+        result = cur.fetchone()
+        history_shares = result[0]
+        cur.execute("SELECT limitation FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + self.transaction_id + ";")
+        result = cur.fetchone()
+        price = result[0]
+        cur.execute("SELECT symbol FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + self.transaction_id + ";")
+        result = cur.fetchone()
+        symbol = result[0]
+        sql = "UPDATE TRANSACTION SET alive = " + "FALSE" + " WHERE TRANSACTION.transaction_id = " + str(self.transaction_id) + ";"        
         cur.execute(sql)
-        sql = "INSERT INTO HISTORY(transaction_id, account_id, status, history_shares, price, symbol) VALUES(" + self.transaction_id + " , " + account_id + " , " + "CANCEL" + " , " + history_shares + " , " + price + " , '" + symbol + "');"
+        sql = "INSERT INTO HISTORY(transaction_id, account_id, status, history_shares, price, symbol) VALUES(" + str(self.transaction_id) + " , " + str(account_id) + " , '" + "cancel" + "' , " + str(history_shares) + " , " + str(price) + " , '" + symbol + "');"
         cur.execute(sql)
         conn.commit()
 
