@@ -6,12 +6,28 @@ import socket
 from xml_parser import parse_xml
 
 
-
-
 def drop_table(conn, cur):
     drops = "DROP TABLE IF EXISTS POSITION CASCADE; DROP TABLE IF EXISTS HISTORY CASCADE; DROP TABLE IF EXISTS TRANSACTION CASCADE; DROP TABLE IF EXISTS ACCOUNT CASCADE; "
     cur.execute(drops)
-    
+
+
+class Buffer:
+    def __init__(self, sock):
+        self.sock = sock
+        self.buffer = b''
+
+    def get_content(self):
+        while b'\r\n' not in self.buffer:
+            data = self.sock.recv(1)
+            if not data:
+                return None
+            self.buffer += data
+        line, _, self.buffer = self.buffer.partition(b'\n')
+        byte_count = line.decode('utf-8')
+        data = self.sock.recv(int(byte_count))
+        return data.decode('utf-8')
+
+
 def server_handler(executions, conn, cur):
     # The problem that should be handled:
     # 1. Invalid order (ex: account doesn't exist; amount is higher than the balance;)
@@ -50,7 +66,6 @@ def server_handler(executions, conn, cur):
         if(className == "Account"):
             execution.toSQL(conn)
             
-
         if(className == "Position"):
             ### need to check whether valid or not
             sql = "SELECT account_id FROM ACCOUNT WHERE account_id = " + execution.account_id + ";"
@@ -120,9 +135,11 @@ def connect(commands):
         # become a server socket
         serversocket.listen(2)
         # accept connections from outside
+        client_socket, address = serversocket.accept()
+        buffer = Buffer(client_socket)
+
         while True:
-            (clientsocket, address) = serversocket.accept()
-            result = clientsocket.recv(1024).decode()
+            result = buffer.get_content()
             if(result == ""):
                 break
             executions = parse_xml(result)
@@ -142,7 +159,7 @@ def connect(commands):
         cur.close()
         # commit the changes
         conn.commit()
-    except (Exception, psycopg2.DatabaseError) as error:     
+    except (Exception, psycopg2.DatabaseError) as error:
         print(error)
 
     finally:
