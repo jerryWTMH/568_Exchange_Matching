@@ -74,9 +74,9 @@ class Order:
         result = cur.fetchone()
         ### At the mean time, we need to add new order into HISTORY!
         sql = "INSERT INTO HISTORY(transaction_id, account_id, status, history_shares, price, symbol) VALUES(" + str(result[0]) + " , " + self.account_id + " , " + "TRUE" + " , " + self.amount + " , " + self.limit + " , '" + self.symbol + "');"
-        
         cur.execute(sql)
         conn.commit()
+
         
 
 

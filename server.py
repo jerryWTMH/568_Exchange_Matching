@@ -2,6 +2,7 @@ import psycopg2
 from configparser import ConfigParser
 from create_tables import create_tables
 import socket
+import datetime
 
 from xml_parser import parse_xml
 
@@ -50,12 +51,71 @@ def server_handler(executions, conn, cur):
                 print("error occurs in Order! ", error)
             else: 
                 account_id = execution.account_id
-                sql = "SELECT balance FROM ACCOUNT WHERE ACCOUNT.account_id = " + account_id + ";"
-                cur.execute(sql)
-                result = cur.fetchone()
-                if(result[0] < int(execution.limit)):
-                    error = "The limitation of the order is higher than your balance!"
-                    print("error occurs in Order! ", error)
+                if(execution.amount > 0):
+                    ### Buying
+                    sql = "SELECT balance FROM ACCOUNT WHERE ACCOUNT.account_id = " + account_id + ";"
+                    cur.execute(sql)
+                    result = cur.fetchone()
+                    if(result[0] < int(execution.limit) * int(execution.amount)):
+                        error = "The limitation of the order is higher than your balance!"
+                        print("error occurs in Order! ", error)
+                    sql = "UPDATE ACCOUNT SET balance = " + result[0] - (int(execution.limit) * int(execution.amount)) + " WHERE ACCOUNT.account_id = '" + execution.account_id + "' ;"
+                    cur.execute(sql)
+                    
+                    ### add to TRANSACTIOn and HISTORY first
+                    sql = "INSERT INTO TRANSACTION(account_id, create_time, alive, amount, limitation, symbol) VALUES(" +  execution.account_id + ", " + datetime.datetime.now() + ", " + "TRUE" + ", " + execution.amount + ", " + execution.limit + ", '" + execution.symbol + "');"
+                    cur.execute(sql)
+                    conn.commit()
+                    sql = "SELECT currval(pg_get_serial_sequence('TRANSACTION','transaction_id'));"
+                    cur.execute(sql)
+                    result = cur.fetchone() ###### PROBLEM
+                    new_transaction_id = result ###### PROBLEM
+                    sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + account_id + ", " + new_transaction_id + ", " + "open" + ", " + datetime.datetime.now() + ", " + execution.amount + ", " + execution.limit + ", '" + execution.symbol + "');"  
+                    cur.execute(sql)
+                    conn.commit()
+
+                    ### 
+                    sql = "SELECT * FROM TRANSACTION WHERE TRANSACTION.symbol = '" + execution.symbol + "' TRANSACTION.limitation <= '" + execution.limit + "' + ORDER BY TRANSACTION.create_time ASC;"
+                    cur.execute(sql)
+                    sell_orders = cur.fetchall()
+                    for sell_order in sell_orders:
+                        if(execution.amount > sell_order['amount']):
+                            old_transaction_id = sell_order['transaction_id']
+                            old_account_id = sell_order['account_id']
+                            old_amount = sell_order['amount']
+                            old_price = sell_order['price']
+                            symbol = sell_order['symbol']
+                            ###(Old order) alive -> False
+                            sql = "UPDATE TRANSACTION SET alive = FALSE WHERE TRANSACTION.transaction_id = '" + old_transaction_id + "';"
+                            cur.execute(sql)
+                            ###(Old order) delete transaction, and add executed in HISTORY
+                            #sql = "DELETE FROM HISTORY WHERE HISTORY.transaction_id = " + old_transaction_id + ";"
+                            cur.execute(sql)
+                            sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + old_account_id + ", " + old_transaction_id + ", " + "executed" + ", " + datetime.datetime.now() + ", " + old_amount + ", " + old_price + ", " + symbol +");"  
+                            cur.execute(sql)
+                            ###(New order) alive -> True
+                            #sql = "INSERT INTO TRANSACTION(account_id, create_time, alive, amount, limitation, symbol) VALUES(" +  execution.account_id + ", " + datetime.datetime.now() + ", " + "TRUE" + ", " + (execution.amount - amount) + ", " + execution.limit + ", " + execution.symbol + ");"
+                            cur.execute(sql)
+                            ###(New order) add to HISTORY
+                            sql = "UPDATE HISTORY SET history_shares = " + (execution.amount - old_amount) + " WHERE HISTORY.account_id = " + execution.account_id + " AND HISTORY.status = open ;"  
+                            cur.execute(sql)
+                            sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + execution.account_id + ", " + new_transaction_id + ", " + "executed" + ", " + datetime.datetime.now() + ", " + old_amount + ", " + old_price + ", " + symbol +");"  
+                            cur.execute(sql)
+                            execution.amount -= old_amount
+
+
+
+
+
+                else:
+                    ### Selling
+                    shares = execution.amount
+                    sql = "SELECT shares FROM POSITION WHERE POSITION.account_id = " + account_id + " POSITION.symbol = '" + execution.symbol + "' ;"
+                    cur.execute(sql)
+                    result = cur.fetchone()
+                    if(result[0] < int(execution.amount)):
+                        error = "The amount of selling is higher than you own!"
+                        print("error occurs in Order! ", error)
 
                 ### if there is not errorin current execution: call toSQL()
                 if(error == ""):
@@ -140,17 +200,16 @@ def connect(commands):
 
         while True:
             result = buffer.get_content()
-            if(result == ""):
-                break
+            print("result: ", result)
+            if(result == None):
+                continue
             executions = parse_xml(result)
             print(executions)
-            # Handler   
-            # executions_new = server_handler(executions, conn, cur)
+            # Handler
+            print("before handler")   
             server_handler(executions, conn, cur)
-            # for execution in executions.executions:   
-            #     print(execution)     
-                # print(execution.toSQL())
-                # cur.execute(execution.toSQL())
+            print("after handler")
+        
             
         serversocket.close()
         print("close socket")

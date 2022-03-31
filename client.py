@@ -15,15 +15,16 @@ if __name__ == '__main__':
         # "Hello world"
         # "len(Hello world) + \r\n + "Hello world" "
         msg = str.encode(msg, 'utf-8')
+        print(msg)
         s.send(msg)
 
         msg = create_order_testcase()
         msg = str(len(msg)) + '\r\n' + msg
         msg = str.encode(msg, 'utf-8')
+        print(msg)
         s.send(msg)
 
         s.close()
-        print(msg)
         print("done")
     except:
         print("Error from client's socket")
