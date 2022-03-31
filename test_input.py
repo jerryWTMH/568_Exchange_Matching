@@ -110,15 +110,30 @@ def create_account_testcase():
     saving_2_1 = [Saving("2", "5000")]
     saving_2_2 = [Saving("2", "5000")]
     account_requests.append(PositionRequest("META", saving_2_1))
-    account_requests.append(PositionRequest("META", saving_2_2))
-
+    account_requests.append(PositionRequest("AMAZ", saving_2_2))
     create_request = CreateRequest(account_requests)
     return etree.tostring(create_request.xml_element(), pretty_print=True).decode('UTF-8')
 
+def order_account_non_exist_testcase():
+    transactions = []
+    transactions.append(OrderRequest("100", "100", "SYM"))
+    transaction_request = TransactionRequest("10", transactions)
+    return etree.tostring(transaction_request.xml_element(), pretty_print=True).decode('UTF-8')
 
-def create_order_testcase():
-    # msg = "INSERT INTO POSITION(account_id, symbol, shares) VALUES(123456, 'symbol', 100000)"
+def simple_buy_order():
     transactions = []
     transactions.append(OrderRequest("100", "100", "SYM"))
     transaction_request = TransactionRequest("1", transactions)
     return etree.tostring(transaction_request.xml_element(), pretty_print=True).decode('UTF-8')
+
+def buy_order_exceed_limit():
+    transactions = []
+    transactions.append(OrderRequest("100", "1000", "SYM"))
+    transaction_request = TransactionRequest("1", transactions)
+    return etree.tostring(transaction_request.xml_element(), pretty_print=True).decode('UTF-8')
+#
+# def create_order_testcase():
+#     transactions = []
+#     transactions.append(OrderRequest("100", "100", "SYM"))
+#     transaction_request = TransactionRequest("1", transactions)
+#     return etree.tostring(transaction_request.xml_element(), pretty_print=True).decode('UTF-8')

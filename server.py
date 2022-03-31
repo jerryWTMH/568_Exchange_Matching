@@ -1,11 +1,10 @@
 import threading
-
 import psycopg2
 from configparser import ConfigParser
 from create_tables import create_tables
 import socket
 import datetime
-
+import xml_generator as res
 from xml_parser import parse_xml
 
 # connect to the PostgreSQL server
@@ -19,9 +18,10 @@ def drop_table(conn, cur):
 
 
 class Buffer:
-    def __init__(self, sock):
+    def __init__(self, sock, client):
         self.sock = sock
         self.buffer = b''
+        self.client = client
 
     def get_content(self):
         while b'\r\n' not in self.buffer:
@@ -34,6 +34,13 @@ class Buffer:
         data = self.sock.recv(int(byte_count))
         return data.decode('utf-8')
 
+    def send_msg(self, msg):
+        msg = str(len(msg)) + '\r\n' + msg
+        msg = str.encode(msg, 'utf-8')
+        print(msg)
+        print("is sent to client")
+        self.client.send(msg)
+
 
 def server_handler(executions, conn, cur):
     # The problem that should be handled:
@@ -42,22 +49,23 @@ def server_handler(executions, conn, cur):
     # 3. Transaction id should exist in every command.
     # If there is an error in current execution, it would generate the XML for <error>, and put the error message inside of the XML.
     # If there is no error in current execution, it would call the toSQL() of the Class, and then generate the XML for the response message.
-    # This would return XML that is corresponding to the input from the client. 
-    return_executions = ""
+    # This would return XML that is corresponding to the input from the client.
+    msgs = []
     for execution in executions.executions:
         sql = ""
         error = ""
         className = execution.getClassName()
         if className == "Order":
-            ### need to check whether valid or not
             sql = "SELECT * FROM ACCOUNT WHERE EXISTS(SELECT account_id FROM ACCOUNT WHERE ACCOUNT.account_id = " + execution.account_id + ");"
             cur.execute(sql)
-            if(cur.rowcount == 0):               
+            if cur.rowcount == 0:
                 error = "The account_id doesn't exist!"
                 print("error occurs in Order! ", error)
+                msgs.append(res.ErrorResponse({"sym":execution.symbol,"amount":execution.amount,"limit":execution.limit},error))
+                break
             else: 
                 account_id = execution.account_id
-                if(execution.amount > 0):
+                if(int(execution.amount) > 0):
                     ### Buying
                     sql = "SELECT balance FROM ACCOUNT WHERE ACCOUNT.account_id = " + account_id + ";"
                     cur.execute(sql)
@@ -65,18 +73,18 @@ def server_handler(executions, conn, cur):
                     if(result[0] < int(execution.limit) * int(execution.amount)):
                         error = "The limitation of the order is higher than your balance!"
                         print("error occurs in Order! ", error)
-                    sql = "UPDATE ACCOUNT SET balance = " + result[0] - (int(execution.limit) * int(execution.amount)) + " WHERE ACCOUNT.account_id = '" + execution.account_id + "' ;"
+                    sql = "UPDATE ACCOUNT SET balance = " + str(result[0] - (int(execution.limit) * int(execution.amount))) + " WHERE ACCOUNT.account_id = '" + execution.account_id + "' ;"
                     cur.execute(sql)
                     
-                    ### add to TRANSACTIOn and HISTORY first
-                    sql = "INSERT INTO TRANSACTION(account_id, create_time, alive, amount, limitation, symbol) VALUES(" +  execution.account_id + ", " + datetime.datetime.now() + ", " + "TRUE" + ", " + execution.amount + ", " + execution.limit + ", '" + execution.symbol + "');"
+                    ### add to TRANSACTION and HISTORY first
+                    sql = "INSERT INTO TRANSACTION(account_id, create_time, alive, amount, limitation, symbol) VALUES(" +  execution.account_id + ", " + "now()" + ", " + "TRUE" + ", " + execution.amount + ", " + execution.limit + ", '" + execution.symbol + "');"
                     cur.execute(sql)
                     conn.commit()
                     sql = "SELECT currval(pg_get_serial_sequence('TRANSACTION','transaction_id'));"
                     cur.execute(sql)
                     result = cur.fetchone() ###### PROBLEM
-                    new_transaction_id = result ###### PROBLEM
-                    sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + account_id + ", " + new_transaction_id + ", " + "open" + ", " + datetime.datetime.now() + ", " + execution.amount + ", " + execution.limit + ", '" + execution.symbol + "');"  
+                    new_transaction_id = result[0] ###### PROBLEM
+                    sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + account_id + ", " + new_transaction_id + ", " + "open" + ", " + "now()" + ", " + execution.amount + ", " + execution.limit + ", '" + execution.symbol + "');"
                     cur.execute(sql)
                     conn.commit()
 
@@ -124,10 +132,17 @@ def server_handler(executions, conn, cur):
                 ##else:
                     ##prepare xml error tag here
 
-        if(className == "Account"):
-            execution.toSQL(conn)
+        elif className == "Account":
+            sql = "SELECT account_id FROM ACCOUNT WHERE account_id = " + execution.account_id + ";"
+            cur.execute(sql)
+            if (cur.rowcount != 0):
+                error = "The account_id Already Existed"
+                print("error occurs in Account Init! ", error)
+                msgs.append(res.ErrorResponse({"id":execution.account_id}, error))
+                break
+            msgs.append(execution.toSQL(conn))
             
-        if(className == "Position"):
+        elif className == "Position":
             ### need to check whether valid or not
             sql = "SELECT account_id FROM ACCOUNT WHERE account_id = " + execution.account_id + ";"
             cur.execute(sql)
@@ -138,7 +153,7 @@ def server_handler(executions, conn, cur):
             if(error == ""):
                 execution.toSQL(conn)
 
-        if(className == "Query"):
+        elif className == "Query":
             ### need to check whether valid or not
             sql = "SELECT transaction_id FROM TRANSACTION WHERE transaction_id = " + execution.transaction_id + ";"
             cur.execute(sql)
@@ -149,7 +164,7 @@ def server_handler(executions, conn, cur):
             if(error == ""):
                 execution.toSQL(conn)
 
-        if(className == "Cancel"):
+        elif className == "Cancel":
             ### need to check whether valid or not
             sql = "SELECT transaction_id FROM TRANSACTION WHERE transaction_id = " + execution.transaction_id + ";"
             cur.execute(sql)
@@ -161,8 +176,10 @@ def server_handler(executions, conn, cur):
                 execution.toSQL(conn)                    
             ##else:
                 ##prepare xml error tag here
-        # try to add some XML information to return_executions        
-    
+        # try to add some XML information to return_executions
+        conn.commit()
+
+    return msgs
     # return return_executions
 
 
@@ -183,7 +200,7 @@ class ClientThread(threading.Thread, Buffer):
                 break
             executions = parse_xml(result)
             print(executions)
-            server_handler(executions, conn, cur)
+            results = server_handler(executions, conn, cur)
 
 def connect(commands):
     """ Connect to the PostgreSQL database server """
@@ -213,15 +230,8 @@ def connect(commands):
 
 	    # close the communication with the PostgreSQL
         cur.close()
-        # commit the changes
-        conn.commit()
-    # except (Exception, psycopg2.DatabaseError) as error:
-    #     print(error)
-    #
-    # finally:
-    #     if conn is not None:
-    #         conn.close()
-    #         print('Database connection closed.')
+        conn.close()
+        print('Database connection closed.')
 
 if __name__ == '__main__':
     commands = create_tables()
