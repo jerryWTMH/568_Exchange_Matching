@@ -45,6 +45,7 @@ class Account:
         sql = "INSERT INTO ACCOUNT(account_id, balance) VALUES(" + self.account_id + " , " + self.balance + ");"
         cur = conn.cursor()
         cur.execute(sql)
+        conn.commit()
 
 class Order:
     def __init__(self, account_id, amount, limit, symbol):
@@ -86,15 +87,11 @@ class Query:
 
     def __str__(self):
         return 'Query(transaction_id = ' + self.transaction_id + ')\n'
+
     def getClassName(self):
         return "Query"
-    def toSQL(self, conn):
-        print("Inside of Query toSQL")
-        sql = "SELECT * FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + str(self.transaction_id) + ";"
-        print(sql)
-        cur = conn.cursor()
-        query_result = cur.execute(sql)
-        conn.commit()
+    # def toSQL(self, conn):
+
 
 
 class Cancel:

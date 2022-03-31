@@ -119,7 +119,7 @@ def connect(commands):
         thread_count = 0
         while True:
             client_socket, address = serversocket.accept()
-            buffer = Buffer(client_socket)
+            buffer = Buffer(client_socket,serversocket)
             ct = ClientThread(buffer, str(thread_count))
             thread_count += 1
             ct.run()

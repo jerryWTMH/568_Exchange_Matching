@@ -21,17 +21,25 @@ if __name__ == '__main__':
         msg = test_input.create_account_testcase()
 
         send(s,msg)
-        s.recv()
+        # s.recv()
         #__________________________________________________________________________________________________
-        msg = test_input.buy_order_exceed_limit()
+        msg = test_input.one_order("1","TESLA","-500","15")
+        send(s,msg)
+
+        msg = test_input.one_order("1","TESLA","-200","12")
+        send(s,msg)
+
+        msg = test_input.one_order("1","APPLE","-200","10")
+        send(s,msg)
+
+        msg = test_input.one_order("2","TESLA","650","15")
         send(s,msg)
 
 
+
+
         msg = "This is the end!"
-        msg = str(len(msg)) + '\r\n' + msg
-        msg = str.encode(msg, 'utf-8')
-        print(msg)
-        s.send(s,msg)
+        send(s,msg)
 
         s.close()
         print("done")

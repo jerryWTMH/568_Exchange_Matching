@@ -106,7 +106,7 @@ def create_account_testcase():
     account_requests.append(PositionRequest("TESLA", saving_1_1))
     account_requests.append(PositionRequest("APPLE", saving_1_2))
     #account 2 has 5000 balance and 5000 shares of META and 5000 shares of AMAZON
-    account_requests.append(AccountRequest("2", "5000"))
+    account_requests.append(AccountRequest("2", "50000"))
     saving_2_1 = [Saving("2", "5000")]
     saving_2_2 = [Saving("2", "5000")]
     account_requests.append(PositionRequest("META", saving_2_1))
@@ -131,6 +131,14 @@ def buy_order_exceed_limit():
     transactions.append(OrderRequest("100", "1000", "SYM"))
     transaction_request = TransactionRequest("1", transactions)
     return etree.tostring(transaction_request.xml_element(), pretty_print=True).decode('UTF-8')
+
+def one_order(account_id:str,sym:str,amount:str,limit:str):
+    transactions = []
+    transactions.append(OrderRequest(amount, limit, sym))
+    transaction_request = TransactionRequest(account_id, transactions)
+    return etree.tostring(transaction_request.xml_element(), pretty_print=True).decode('UTF-8')
+
+
 #
 # def create_order_testcase():
 #     transactions = []
