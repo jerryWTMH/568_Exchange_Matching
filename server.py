@@ -1,3 +1,5 @@
+import threading
+
 import psycopg2
 from configparser import ConfigParser
 from create_tables import create_tables
@@ -5,6 +7,10 @@ import socket
 
 from xml_parser import parse_xml
 
+# connect to the PostgreSQL server
+conn = psycopg2.connect(host="",database="MARKET",user="postgres",password="passw0rd")
+        # create a cursor
+cur = conn.cursor()
 
 def drop_table(conn, cur):
     drops = "DROP TABLE IF EXISTS POSITION CASCADE; DROP TABLE IF EXISTS HISTORY CASCADE; DROP TABLE IF EXISTS TRANSACTION CASCADE; DROP TABLE IF EXISTS ACCOUNT CASCADE; "
@@ -41,7 +47,7 @@ def server_handler(executions, conn, cur):
         sql = ""
         error = ""
         className = execution.getClassName()
-        if(className == "Order"):
+        if className == "Order":
             ### need to check whether valid or not
             sql = "SELECT * FROM ACCOUNT WHERE EXISTS(SELECT account_id FROM ACCOUNT WHERE ACCOUNT.account_id = " + execution.account_id + ");"
             cur.execute(sql)
@@ -53,7 +59,8 @@ def server_handler(executions, conn, cur):
                 sql = "SELECT balance FROM ACCOUNT WHERE ACCOUNT.account_id = " + account_id + ";"
                 cur.execute(sql)
                 result = cur.fetchone()
-                if(result[0] < int(execution.limit)):
+
+                if result[0] < int(execution.limit * execution):
                     error = "The limitation of the order is higher than your balance!"
                     print("error occurs in Order! ", error)
 
@@ -105,53 +112,47 @@ def server_handler(executions, conn, cur):
     # return return_executions
 
 
-def connect(commands):
-    """ Connect to the PostgreSQL database server """
+class ClientThread(threading.Thread, Buffer):
+    def __init__(self, buffer, thread_ID):
+        threading.Thread.__init__(self)
+        self.buffer = buffer
+        self.thread_ID = thread_ID
 
-    conn = None
-    try:
-        # connect to the PostgreSQL server
-        print('Connecting to the PostgreSQL database...')
-        conn = psycopg2.connect(
-        host="",
-        database="MARKET",
-        user="postgres",
-        password="passw0rd")
-		
-        # create a cursor
-        cur = conn.cursor()
-
-        # drop the table
-        drop_table(conn, cur)
-    
-        # create table one by one
-        for command in commands:
-            cur.execute(command)
-
-        print("start socket")
-        serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # bind the socket to a public host, and a well-known port
-        serversocket.bind(("", 12345))
-        # become a server socket
-        serversocket.listen(2)
-        # accept connections from outside
-        client_socket, address = serversocket.accept()
-        buffer = Buffer(client_socket)
-
+    def run(self):
+        print(self.thread_ID + "is running!")
         while True:
-            result = buffer.get_content()
-            if(result == ""):
+            #continuously read requests from buffer
+            result = self.buffer.get_content()
+            if result is None:
+                continue
+            if result == "This is the end!":
                 break
             executions = parse_xml(result)
             print(executions)
-            # Handler   
-            # executions_new = server_handler(executions, conn, cur)
             server_handler(executions, conn, cur)
-            # for execution in executions.executions:   
-            #     print(execution)     
-                # print(execution.toSQL())
-                # cur.execute(execution.toSQL())
-            
+
+def connect(commands):
+    """ Connect to the PostgreSQL database server """
+    if True:
+        # drop the table
+        drop_table(conn, cur)
+        # create table one by one
+        for command in commands:
+            cur.execute(command)
+        print("start socket")
+        serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # bind the socket to a public host, and a well-known port
+        serversocket.bind(("localhost", 12345))
+        # become a server socket
+        serversocket.listen(2)
+        # accept connections from outside
+        thread_count = 0
+        while True:
+            client_socket, address = serversocket.accept()
+            buffer = Buffer(client_socket)
+            ct = ClientThread(buffer, str(thread_count))
+            thread_count += 1
+            ct.run()
         serversocket.close()
         print("close socket")
 
@@ -159,13 +160,13 @@ def connect(commands):
         cur.close()
         # commit the changes
         conn.commit()
-    except (Exception, psycopg2.DatabaseError) as error:
-        print(error)
-
-    finally:
-        if conn is not None:
-            conn.close()
-            print('Database connection closed.')
+    # except (Exception, psycopg2.DatabaseError) as error:
+    #     print(error)
+    #
+    # finally:
+    #     if conn is not None:
+    #         conn.close()
+    #         print('Database connection closed.')
 
 if __name__ == '__main__':
     commands = create_tables()
