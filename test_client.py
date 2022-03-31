@@ -7,7 +7,7 @@ if __name__ == '__main__':
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # now connect to the web server on port 80 - the normal http port
         s.connect(("localhost", 12345))
-        msg = ""
+        msg = "This is the end!"
         msg = str(len(msg)) + '\r\n' + msg
         msg = str.encode(msg, 'utf-8')
         s.send(msg)

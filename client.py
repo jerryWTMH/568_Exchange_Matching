@@ -1,4 +1,6 @@
 import socket
+import time
+
 from xml_parser import parse_xml
 from test_input import create_account_testcase
 from test_input import create_order_testcase
@@ -8,17 +10,14 @@ if __name__ == '__main__':
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # now connect to the web server on port 80 - the normal http port
         s.connect(("localhost", 12345))
-        # msg = "INSERT INTO ACCOUNT(account_id, balance) VALUES(888, 10000);"
         msg = create_account_testcase()
-        # msg = "INSERT INTO POSITION(account_id, symbol, shares) VALUES(123456, 'symbol', 100000)"
         msg = str(len(msg)) + '\r\n' + msg
-        # "Hello world"
-        # "len(Hello world) + \r\n + "Hello world" "
         msg = str.encode(msg, 'utf-8')
         print(msg)
         s.send(msg)
-
-        msg = create_order_testcase()
+        time.sleep(10)
+        # sleep for ten seconds to wait for closing
+        msg = "This is the end!"
         msg = str(len(msg)) + '\r\n' + msg
         msg = str.encode(msg, 'utf-8')
         print(msg)
@@ -26,5 +25,4 @@ if __name__ == '__main__':
 
         s.close()
         print("done")
-    except:
-        print("Error from client's socket")
+    except Exception as e: print(e)
