@@ -13,15 +13,16 @@ if __name__ == '__main__':
         msg = create_account_testcase()
         msg = str(len(msg)) + '\r\n' + msg
         msg = str.encode(msg, 'utf-8')
+        print(msg)
         s.send(msg)
         time.sleep(10)
         # sleep for ten seconds to wait for closing
         msg = "This is the end!"
         msg = str(len(msg)) + '\r\n' + msg
         msg = str.encode(msg, 'utf-8')
+        print(msg)
         s.send(msg)
 
         s.close()
-        print(msg)
         print("done")
     except Exception as e: print(e)
