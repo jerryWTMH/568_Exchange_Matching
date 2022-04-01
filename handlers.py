@@ -55,16 +55,14 @@ def order_handler(execution:parser.Order,conn):
                         ###(Old order) alive -> False
                         sql = "UPDATE TRANSACTION SET alive = FALSE WHERE TRANSACTION.transaction_id = '" + old_transaction_id + "';"
                         cur.execute(sql)
-                        ###(Old order) delete open, and add executed in HISTORY
-                        sql = "DELETE FROM HISTORY WHERE HISTORY.transaction_id = " + old_transaction_id + " AND HISTORY.status = 'open';"
+                        ###(Old order) delete open in HISTORY
+                        sql = "DELETE FROM HISTORY WHERE HISTORY.transaction_id = " + old_transaction_id + " AND HISTORY.status = open AND HISTORY.symbol = '" + symbol + "' AND HISTORY.price = " + old_price + "AND HISTORY.history_shares = " + old_amount +  ";"
                         cur.execute(sql)
+                        ###(Old order) add executed in HISTORY
                         sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + old_account_id + ", " + old_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + str(old_amount) + ", " + old_price + ", '" + symbol + "');"
                         cur.execute(sql)
-                        ###(New order) alive -> True
-                        sql = "UPDATE TRANSACTION SET alive = TRUE WHERE TRANSACTION.transaction_id = " + new_transaction_id + ";"
-                        cur.execute(sql)
-                        ###(New order) add to HISTORY
-                        sql = "UPDATE HISTORY SET history_shares = " + str( int(execution.amount) + old_amount) + " WHERE HISTORY.account_id = " +  execution.account_id + " AND HISTORY.status = 'open' ;"
+                        ###(New order) add executed to HISTORY
+                        sql = "UPDATE HISTORY SET history_shares = " + str(int(execution.amount) + old_amount) + " WHERE HISTORY.account_id = " +  execution.account_id + " AND HISTORY.status = open AND HISTORY.symbol = " + symbol + " AND HISTORY.price = " + str(execution.limit) + ";"
                         cur.execute(sql)
                         ### the new order's amount should be deducted
                         sql = "UPDATE TRANSACTION SET amount =" + str(int(execution.amount) + old_amount) + "WHERE TRANSACTION.transaction_id = " + new_transaction_id + ";"
@@ -77,32 +75,38 @@ def order_handler(execution:parser.Order,conn):
                         ###(Old order) alive -> False
                         sql = "UPDATE TRANSACTION SET alive = FALSE WHERE TRANSACTION.transaction_id = '" + old_transaction_id + "';"
                         cur.execute(sql)
-                        ###(Old order) delete open, and add executed in HISTORY
-                        sql = "DELETE FROM HISTORY WHERE HISTORY.transaction_id = " + old_transaction_id + " AND HISTORY.status = open;"
+                        ###(Old order) delete open in HISTORY
+                        sql = "DELETE FROM HISTORY WHERE HISTORY.transaction_id = " + old_transaction_id + " AND HISTORY.status = open AND HISTORY.symbol = '" + symbol + "' AND HISTORY.price = " + old_price + "AND HISTORY.history_shares = " + old_amount +  ";"
                         cur.execute(sql)
+                        ###(Old order) add executed in HISTORY
                         sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + old_account_id + ", " + old_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + str(old_amount) + ", " + old_price + ", '" + symbol + "');"
                         cur.execute(sql)
                         ###(New order) alive -> False
                         sql = "UPDATE TRANSACTION SET alive = FALSE WHERE TRANSACTION.transaction_id = " + new_transaction_id + ";"
                         cur.execute(sql)
-                        ###(New order) add to HISTORY
-                        sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + execution.account_id + ", " + new_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + str(old_amount) + ", " + old_price + ", '" + symbol + "');"
-                        cur.execute(sql)
+                        ###(New order) delete open order in HISTORY
+                        sql = "DELETE FROM HISTORY WHERE HISTORY.transaction_id = " + new_transaction_id + " AND HISTORY.status = open AND HISTORY.symbol = '" + symbol + "' AND HISTORY.price = " + execution.limit +  " AND HISTORY.history_shares = " + str(execution.amount) + ";"
+                        ###(New order) add executed to HISTORY
+                        sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" +  execution.account_id + ", " + new_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + str(execution.amount) + ", " + old_price + ", '" + symbol + "');"
                         execution.amount = str(0)
                         executed_shares += -1 * old_amount
+                        
                     elif (int(execution.amount) < -1 * old_amount):
-                        ###(Old order) update open, and add executed in HISTORY
-                        sql = "UPDATE HISTORY SET history_shares = " + str(old_amount - int(execution.amount)) + " WHERE HISTORY.transaction_id = " + old_transaction_id + " AND HISTORY.status = 'open';"
+                        ###(Old order) update open in HISTORY
+                        sql = "UPDATE HISTORY SET history_shares = " + str(old_amount + int(execution.amount)) + " WHERE HISTORY.transaction_id = " + old_transaction_id + " AND HISTORY.status = 'open';"
                         cur.execute(sql)
-                        sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + old_account_id + ", " + old_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + execution.amount + ", " + old_price + ", '" + symbol + "');"
+                         ###(Old order) add executed in HISTORY
+                        sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + old_account_id + ", " + old_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + -1 * execution.amount + ", " + old_price + ", '" + symbol + "');"
+                        cur.execute(sql)                        
+                        ###(old order) update amount = old_amount - execution.amount
+                        sql = "UPDATE TRANSACTION SET amount =" + str(old_amount + int(execution.amount))+"WHERE TRANSACTION.transaction_id = " + old_transaction_id + ";"
                         cur.execute(sql)
                         ###(New order) alive -> False
                         sql = "UPDATE TRANSACTION SET alive = FALSE WHERE TRANSACTION.transaction_id = " + new_transaction_id + ";"
                         cur.execute(sql)
-                        ###(old order) update amount = old_amount - execution.amount
-                        sql = "UPDATE TRANSACTION SET amount =" + str(old_amount + int(execution.amount))+"WHERE TRANSACTION.transaction_id = " + old_transaction_id + ";"
-                        cur.execute(sql)
-                        ###(New order) add to HISTORY
+                        ###(New order) delete open order in HISTORY
+                        sql = "DELETE FROM HISTORY WHERE HISTORY.transaction_id = " + new_transaction_id + " AND HISTORY.status = open AND HISTORY.symbol = '" + symbol + "' AND HISTORY.price = " + str(execution.limit) +  " AND HISTORY.history_shares = " + old_amount + ";"
+                        ###(New order) add executed to HISTORY
                         sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" +  execution.account_id + ", " + new_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + str(execution.amount) + ", " + old_price + ", '" + symbol + "');"
                         cur.execute(sql)
                         executed_shares += int(execution.amount)
@@ -152,58 +156,65 @@ def order_handler(execution:parser.Order,conn):
                 old_price = str(buy_order[5])
                 symbol = str(buy_order[6])
                 if execution.amount != 0:
-                    if (int(execution.amount) > -1 * old_amount):
+                    if (-1 * int(execution.amount) > old_amount):
                         ###(Old order) alive -> False
                         sql = "UPDATE TRANSACTION SET alive = FALSE WHERE TRANSACTION.transaction_id = '" + old_transaction_id + "';"
                         cur.execute(sql)
-                        ###(Old order) delete open, and add executed in HISTORY
-                        sql = "DELETE FROM HISTORY WHERE HISTORY.transaction_id = " + old_transaction_id + " AND HISTORY.status = open;"
+                        ###(Old order) delete open in HISTORY
+                        sql = "DELETE FROM HISTORY WHERE HISTORY.transaction_id = " + old_transaction_id + " AND HISTORY.status = open AND HISTORY.symbol = '" + symbol + "' AND HISTORY.price = " + old_price + "AND HISTORY.history_shares = " + old_amount +  ";"
                         cur.execute(sql)
-                        sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + old_account_id + ", " + old_transaction_id + ", " + "executed" + ", " + "now()" + ", " + old_amount + ", " + old_price + ", " + symbol + ");"
+                        ###(Old order) add executed in HISTORY
+                        sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + old_account_id + ", " + old_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + str(old_amount) + ", " + old_price + ", '" + symbol + "');"
                         cur.execute(sql)
-                        ###(New order) alive -> True
-                        sql = "UPDATE TRANSACTION SET alive = TRUE WHERE TRANSACTION.transaction_id = " + new_transaction_id + ";"
+                        ###(New order) add executed to HISTORY
+                        sql = "UPDATE HISTORY SET history_shares = " + str(int(execution.amount) + old_amount) + " WHERE HISTORY.account_id = " +  execution.account_id + " AND HISTORY.status = open AND HISTORY.symbol = " + symbol + " AND HISTORY.price = " + str(execution.limit) + ";"
                         cur.execute(sql)
-                        ###(New order) add to HISTORY
-                        sql = "UPDATE HISTORY SET history_shares = " + (
-                                    execution.amount + old_amount) + " WHERE HISTORY.account_id = " + int(
-                            execution.account_id) + " AND HISTORY.status = open ;"
+                        ### the new order's amount should be deducted
+                        sql = "UPDATE TRANSACTION SET amount =" + str(int(execution.amount) + old_amount) + "WHERE TRANSACTION.transaction_id = " + new_transaction_id + ";"
                         cur.execute(sql)
-                        sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + int(
-                            execution.account_id) + ", " + new_transaction_id + ", " + "executed" + ", " + "now()" + ", " + str(-1 * old_amount) + ", " + old_price + ", " + symbol + ");"
+                        sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + execution.account_id + ", " + new_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + str(old_amount) + ", " + old_price + ",' " + symbol + "');"
                         cur.execute(sql)
-                        execution.amount -= old_amount
-                    elif (execution.amount == -1 * old_amount):
-                        ###(Old order) alive -> False
+                        execution.amount = str(int(execution.amount)+old_amount)
+                        
+                    elif (-1 * int(execution.amount) == old_amount):
+                         ###(Old order) alive -> False
                         sql = "UPDATE TRANSACTION SET alive = FALSE WHERE TRANSACTION.transaction_id = '" + old_transaction_id + "';"
                         cur.execute(sql)
-                        ###(Old order) delete open, and add executed in HISTORY
-                        sql = "DELETE FROM HISTORY WHERE HISTORY.transaction_id = " + old_transaction_id + " AND HISTORY.status = open;"
+                        ###(Old order) delete open in HISTORY
+                        sql = "DELETE FROM HISTORY WHERE HISTORY.transaction_id = " + old_transaction_id + " AND HISTORY.status = open AND HISTORY.symbol = '" + symbol + "' AND HISTORY.price = " + old_price + "AND HISTORY.history_shares = " + old_amount +  ";"
                         cur.execute(sql)
-                        sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + old_account_id + ", " + old_transaction_id + ", " + "executed" + ", " + "now()" + ", " + str(old_amount) + ", " + old_price + ", " + symbol + ");"
+                        ###(Old order) add executed in HISTORY
+                        sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + old_account_id + ", " + old_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + str(old_amount) + ", " + old_price + ", '" + symbol + "');"
                         cur.execute(sql)
                         ###(New order) alive -> False
                         sql = "UPDATE TRANSACTION SET alive = FALSE WHERE TRANSACTION.transaction_id = " + new_transaction_id + ";"
                         cur.execute(sql)
-                        ###(New order) add to HISTORY
-                        sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + int(
-                            execution.account_id) + ", " + new_transaction_id + ", " + "executed" + ", " + "now()" + ", " + str(-1 * old_amount) + ", " + old_price + ", " + symbol + ");"
+                        ###(New order) delete open order in HISTORY
+                        sql = "DELETE FROM HISTORY WHERE HISTORY.transaction_id = " + new_transaction_id + " AND HISTORY.status = open AND HISTORY.symbol = '" + symbol + "' AND HISTORY.price = " + execution.limit +  " AND HISTORY.history_shares = " + str(execution.amount) + ";"
+                        ###(New order) add executed to HISTORY
+                        sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" +  execution.account_id + ", " + new_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + str(execution.amount) + ", " + old_price + ", '" + symbol + "');" 
                         cur.execute(sql)
-                        execution.amount -= old_amount
-                    elif (execution.amount < -1 * old_amount):
-                        ###(Old order) update open, and add executed in HISTORY
-                        sql = "UPDATE HISTORY SET history_shares = " + str(old_amount + int(execution.amount)) + " WHERE HISTORY.transaction_id = " + old_transaction_id + " AND HISTORY.status = open;"
+                        execution.amount = str(0)
+                        
+                    elif (-1 * int(execution.amount) < old_amount):
+                        ###(Old order) update open in HISTORY
+                        sql = "UPDATE HISTORY SET history_shares = " + str(old_amount + int(execution.amount)) + " WHERE HISTORY.transaction_id = " + old_transaction_id + " AND HISTORY.status = 'open';"
                         cur.execute(sql)
-                        sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + old_account_id + ", " + old_transaction_id + ", " + "executed" + ", " + "now()" + ", " + str(-1 * int(
-                            execution.amount)) + ", " + old_price + ", " + symbol + ");"
+                        ###(Old order) add executed in HISTORY
+                        sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + old_account_id + ", " + old_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + -1 * execution.amount + ", " + old_price + ", '" + symbol + "');"
+                        cur.execute(sql)
+                        ###(Old order) update amount = old_amount - execution.amount
+                        sql = "UPDATE TRANSACTION SET amount =" + str(old_amount + int(execution.amount))+"WHERE TRANSACTION.transaction_id = " + old_transaction_id + ";"
                         cur.execute(sql)
                         ###(New order) alive -> False
                         sql = "UPDATE TRANSACTION SET alive = FALSE WHERE TRANSACTION.transaction_id = " + new_transaction_id + ";"
+                        cur.execute(sql)                                       
+                        ###(New order) delete open order in HISTORY
+                        sql = "DELETE FROM HISTORY WHERE HISTORY.transaction_id = " + new_transaction_id + " AND HISTORY.status = open AND HISTORY.symbol = '" + symbol + "' AND HISTORY.price = " + str(execution.limit) +  " AND HISTORY.history_shares = " + old_amount + ";"
+                        ###(New order) add executed to HISTORY
+                        sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" +  execution.account_id + ", " + new_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + str(execution.amount) + ", " + old_price + ", '" + symbol + "');"
                         cur.execute(sql)
-                        ###(New order) add to HISTORY
-                        sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + execution.account_id + ", " + new_transaction_id + ", " + "executed" + ", " + "now()" + ", " + execution.amount + ", " + old_price + ", " + symbol + ");"
-                        cur.execute(sql)
-                        execution.amount -= old_amount
+                        execution.amount = str(0)
 
 
 def account_handler(execution:parser.Account,conn):
