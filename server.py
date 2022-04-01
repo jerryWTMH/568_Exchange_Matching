@@ -9,7 +9,8 @@ from xml_parser import parse_xml
 import handlers as handlers
 import xml_parser as parser
 
-from multiprocessing import Process
+import multiprocessing as mp
+from multiprocessing import Process, Pool
 import os
 
 # connect to the PostgreSQL server
@@ -121,14 +122,16 @@ def connect(commands):
         serversocket.listen(2)
         # accept connections from outside
         thread_count = 0
+        pool = Pool(processes = 3)
+        
         while True:
             client_socket, address = serversocket.accept()
             buffer = Buffer(client_socket,serversocket)
             ct = ClientThread(buffer, str(thread_count))
             thread_count += 1
-            p = Process(target=ct.run())
-            p.start()
-            p.join()
+            pool.apply_async(ct.run())
+            pool.close()
+            pool.join()
 
         serversocket.close()
         print("close socket")
