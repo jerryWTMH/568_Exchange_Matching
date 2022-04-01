@@ -187,7 +187,7 @@ def order_handler(execution:parser.Order,conn):
             sql = "SELECT shares FROM POSITION WHERE POSITION.account_id = " + account_id + "AND POSITION.symbol = '" + execution.symbol + "' ;"
             cur.execute(sql)
             result = cur.fetchone()
-            if (result[0] < -int(execution.amount)):
+            if (result is None or result[0] < -int(execution.amount)):
                 error = "The amount of selling is higher than you own!"
                 print("error occurs in Order! ", error)
                 return res.ErrorResponse({"sym": execution.symbol, "amount": execution.amount, "limit": execution.limit}, error)

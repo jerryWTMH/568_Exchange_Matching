@@ -1,7 +1,5 @@
 import socket
-import time
 
-from xml_parser import parse_xml
 import test_input
 
 def send(s, msg):
@@ -27,7 +25,7 @@ if __name__ == '__main__':
         send(s, msg)
         msg = test_input.one_order("2", "TESLA", "300", "13")
         send(s, msg)
-        msg = test_input.one_cancel(transaction_id="1",account_id="1")
+        msg = test_input.one_cancel(transaction_id="1", account_id="1")
         send(s, msg)
         msg = test_input.one_query("1")
         send(s, msg)

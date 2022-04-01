@@ -90,9 +90,9 @@ class QueryHelper:
         history_results = cur.fetchall()
         for history_result in history_results:
             status = history_result[3]
-            share = history_result[6]
-            time = history_result[5]
-            price = history_result[7]
+            share = history_result[5]
+            time = history_result[4]
+            price = history_result[6]
             if status == "open":
                 open_sub_transaction = xml_generator.SubTransaction("Open",share,price,time)
                 self.query_results.append(open_sub_transaction)
