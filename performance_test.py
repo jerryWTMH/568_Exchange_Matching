@@ -31,13 +31,6 @@ if __name__ == '__main__':
         server_msg = s.recv(2048)
         while True:
             print("This is a new round")
-            #
-            # msg = test_input.one_order("1", "TESLA", "500", "12")
-            # send(s, msg)
-            # msg = test_input.one_order("1", "APPLE", "500", "12")
-            # send(s, msg)
-            # msg = test_input.one_order("1", "APPLE", "-500", "12")
-            # send(s, msg)
             msg = test_input.one_query("1")
             send(s, msg)
             msg = "This is the end!"
