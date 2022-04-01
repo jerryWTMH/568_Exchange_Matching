@@ -1,4 +1,6 @@
 import threading
+import time
+
 import psycopg2
 from configparser import ConfigParser
 from create_tables import create_tables
@@ -8,6 +10,7 @@ import xml_generator as res
 from xml_parser import parse_xml
 import handlers as handlers
 import xml_parser as parser
+import random
 
 import multiprocessing as mp
 from multiprocessing import Process, Pool,Lock
@@ -121,7 +124,7 @@ class ClientThread(threading.Thread, Buffer):
                 #This is for performance test
                 request_count = request_count+1
                 time_difference_seconds = (datetime.datetime.now() - start_time).seconds
-                if time_difference_seconds >= 5:
+                if time_difference_seconds >= 1:
                     start_time = datetime.datetime.now()
                     print(request_count)
 
