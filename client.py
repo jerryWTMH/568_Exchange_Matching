@@ -23,6 +23,9 @@ if __name__ == '__main__':
         send(s,msg)
         # s.recv()
         #__________________________________________________________________________________________________
+        msg = test_input.one_order("2", "TESLA", "750", "15")
+        send(s, msg)
+
         msg = test_input.one_order("1","TESLA","-500","15")
         send(s,msg)
 
@@ -32,8 +35,7 @@ if __name__ == '__main__':
         msg = test_input.one_order("1","APPLE","-200","10")
         send(s,msg)
 
-        msg = test_input.one_order("2","TESLA","650","15")
-        send(s,msg)
+
 
 
 
