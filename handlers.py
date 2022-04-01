@@ -58,6 +58,7 @@ def increase_balance_sell(conn, shares, price,  new_account_id ):
     
 
 def order_handler(execution:parser.Order,conn):
+    print("Inside of Order Handler")
     cur = conn.cursor()
     sql = "SELECT * FROM ACCOUNT WHERE EXISTS(SELECT account_id FROM ACCOUNT WHERE ACCOUNT.account_id = " + execution.account_id + ");"
     cur.execute(sql)
@@ -95,7 +96,7 @@ def order_handler(execution:parser.Order,conn):
             conn.commit()
 
             ###
-            sql = "SELECT * FROM TRANSACTION WHERE TRANSACTION.symbol = '" + execution.symbol + "'AND TRANSACTION.limitation <= '" + execution.limit + "'AND TRANSACTION.amount < 0  ORDER BY TRANSACTION.create_time ASC;"
+            sql = "SELECT * FROM TRANSACTION WHERE TRANSACTION.alive = TRUE AND TRANSACTION.symbol = '" + execution.symbol + "'AND TRANSACTION.limitation <= '" + execution.limit + "'AND TRANSACTION.amount < 0  ORDER BY TRANSACTION.create_time ASC;"
             cur.execute(sql)
             sell_orders = cur.fetchall()
             
@@ -204,7 +205,7 @@ def order_handler(execution:parser.Order,conn):
             conn.commit()
 
             ###
-            sql = "SELECT * FROM TRANSACTION WHERE TRANSACTION.symbol = '" + execution.symbol + "'AND TRANSACTION.limitation >= '" + execution.limit + "'AND TRANSACTION.amount > 0 "+" ORDER BY TRANSACTION.create_time ASC;"
+            sql = "SELECT * FROM TRANSACTION WHERE TRANSACTION.alive = TRUE AND TRANSACTION.symbol = '" + execution.symbol + "'AND TRANSACTION.limitation >= '" + execution.limit + "'AND TRANSACTION.amount > 0 "+" ORDER BY TRANSACTION.create_time ASC;"
             cur.execute(sql)
             buy_orders = cur.fetchall()
             executed_shares = 0

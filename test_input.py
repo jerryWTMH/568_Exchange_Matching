@@ -92,7 +92,7 @@ class CancelRequest:
 
     def xml_element(self):
         root = etree.Element('cancel')
-        root.set('cancel',self.transaction_id)
+        root.set('id',self.transaction_id)
         return root
 
 def create_account_error():
