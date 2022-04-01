@@ -354,3 +354,7 @@ def cancel_handler(execution:parser.Cancel,conn):
         print("error occurs in Cancel! ", error)
         return res.ErrorResponse({"id":execution.transaction_id},error)
     execution.toSQL(conn)
+    # queryHelper = parser.QueryHelper(execution.transaction_id,conn)
+    # queryresults = queryHelper.query()
+
+    return res.CancelResponse()
