@@ -1,0 +1,4 @@
+# pip3 install -r requirements.txt
+
+psycopg2>=2.8.4 
+lxml>=4.5.0
