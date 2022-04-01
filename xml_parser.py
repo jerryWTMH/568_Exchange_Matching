@@ -121,6 +121,9 @@ class Cancel:
         symbol = result[0]
         sql = "UPDATE TRANSACTION SET alive = " + "FALSE" + " WHERE TRANSACTION.transaction_id = " + str(self.transaction_id) + ";"        
         cur.execute(sql)
+        sql = "DELETE FROM HISTORY WHERE HISTORY.transaction_id = " + self.transaction_id + " AND HISTORY.status = 'open' AND HISTORY.symbol = '" + symbol + "' AND HISTORY.price = " + str(price) + "AND HISTORY.history_shares = " + str(history_shares) +  ";"
+        cur.execute(sql)
+        print("$$$$$$$$$$$$$$$$DELETE###################")
         sql = "INSERT INTO HISTORY(transaction_id, account_id, status, history_shares, price, symbol) VALUES(" + str(self.transaction_id) + " , " + str(account_id) + " , '" + "cancel" + "' , " + str(history_shares) + " , " + str(price) + " , '" + symbol + "');"
         cur.execute(sql)
         conn.commit()
