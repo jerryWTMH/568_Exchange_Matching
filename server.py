@@ -122,16 +122,22 @@ def connect(commands):
         serversocket.listen(2)
         # accept connections from outside
         thread_count = 0
-        pool = Pool(processes = 3)
+        # while True:
+        #     client_socket, address = serversocket.accept()
+        #     buffer = Buffer(client_socket,serversocket)
+        #     ct = ClientThread(buffer, str(thread_count))
+        #     thread_count += 1
+        #     p = Process(target=ct.run(),)
+        #     p.start()
+        #     p.join()
         
-        while True:
-            client_socket, address = serversocket.accept()
-            buffer = Buffer(client_socket,serversocket)
-            ct = ClientThread(buffer, str(thread_count))
-            thread_count += 1
-            pool.apply_async(ct.run())
-            pool.close()
-            pool.join()
+        with Pool(processes = 4) as pool:
+            while True:
+                client_socket, address = serversocket.accept()
+                buffer = Buffer(client_socket,serversocket)
+                ct = ClientThread(buffer, str(thread_count))
+                thread_count += 1
+                pool.apply_async(ct.run())
 
         serversocket.close()
         print("close socket")

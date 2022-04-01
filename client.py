@@ -23,7 +23,7 @@ if __name__ == '__main__':
         send(s,msg)
         # s.recv()
         #__________________________________________________________________________________________________
-        msg = test_input.one_order("2", "TESLA", "900", "14")
+        msg = test_input.one_order("2", "TESLA", "300", "14")
         send(s, msg)
         time.sleep(10)
         msg = test_input.one_order("1","TESLA","-500","15")
