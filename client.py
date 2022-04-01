@@ -33,8 +33,16 @@ if __name__ == '__main__':
         msg = "This is the end!"
         send(s,msg)
 
-        # s.close()
-        # server_msg = s.recv(1024)
-        # print(server_msg.decode('UTF-8'))
-        # s.close()
+        server_msg = s.recv(2048)
+        print(server_msg.decode('UTF-8'))
+
+        server_msg = s.recv(2048)
+        print(server_msg.decode('UTF-8'))
+
+        server_msg = s.recv(2048)
+        print(server_msg.decode('UTF-8'))
+
+        server_msg = s.recv(2048)
+        print(server_msg.decode('UTF-8'))
+
     except Exception as e: print(e)

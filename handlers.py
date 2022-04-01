@@ -88,8 +88,8 @@ def order_handler(execution:parser.Order,conn):
             conn.commit()
             sql = "SELECT currval(pg_get_serial_sequence('TRANSACTION','transaction_id'));"
             cur.execute(sql)
-            result = cur.fetchone()  ###### PROBLEM
-            new_transaction_id = str(result[0])  ###### PROBLEM
+            result = cur.fetchone()
+            new_transaction_id = str(result[0])
             sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + account_id + ", " + new_transaction_id + ", '" + "open" + "', " + "now()" + ", " + execution.amount + ", " + execution.limit + ", '" + execution.symbol + "');"
 
             cur.execute(sql)
@@ -179,7 +179,7 @@ def order_handler(execution:parser.Order,conn):
                         increase_balance_buy(conn, int(execution.amount), old_price, old_account_id)
                         execution.amount = str(0)
             position_buy_update(execution, conn, executed_shares)   
-           
+            return res.OrderResponse({"sym":execution.symbol,"amount":execution.amount,"limit":execution.limit,"id":new_transaction_id})
         else:
             ######---------------------------------- Selling----------------------------------------######
             shares = execution.amount
@@ -293,8 +293,7 @@ def order_handler(execution:parser.Order,conn):
                         execution.amount = str(0)
                         ###Update Position
                         position_sell_update(execution, conn, executed_shares, old_account_id)
-                        
-
+            return res.OrderResponse({"sym":execution.symbol,"amount":execution.amount,"limit":execution.limit,"id":new_transaction_id})
 
 def account_handler(execution:parser.Account,conn):
     cur = conn.cursor()

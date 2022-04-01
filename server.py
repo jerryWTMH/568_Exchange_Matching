@@ -100,19 +100,21 @@ class ClientThread(threading.Thread, Buffer):
     def run(self):
         print(self.thread_ID + " is running!")
         print("current process PID is : ", os.getpid())
+        response_bytes_array = []
         while True:
             #continuously read requests from buffer
             result = self.buffer.get_content()
             if result is None:
                 continue
             if result == "This is the end!":
-                # result_xml = res.ResultWrapper(results)
-                # result_bytes = etree.tostring(result_xml.xml_element(), pretty_print=True).decode('UTF-8')
-                # self.buffer.send_msg(result_bytes)
+                for sub_response in response_bytes_array:
+                    self.buffer.send_msg(sub_response)
                 break
             executions = parse_xml(result)
-            results = server_handler(executions, conn, cur)
-
+            server_response = server_handler(executions, conn, cur)
+            response_xml = res.ResultWrapper(server_response)
+            response_bytes = etree.tostring(response_xml.xml_element(), pretty_print=True).decode('UTF-8')
+            response_bytes_array.append(response_bytes)
 
 def connect(commands):
     """ Connect to the PostgreSQL database server """

@@ -2,6 +2,15 @@ from io import BytesIO
 
 from lxml import etree
 
+class OrderResponse:
+    def __init__(self,attributes):
+        self.attributes = attributes
+
+    def xml_element(self):
+        root = etree.Element('opened')
+        for attribute in self.attributes:
+            root.set(attribute, str(self.attributes[attribute]))
+        return root
 
 class ErrorResponse:
     def __init__(self, attributes, message):
@@ -55,7 +64,7 @@ class CancelResponse:
         root = etree.Element("canceled")
         root.set("id", str(self.transaction_id))
         for sub_transaction in self.sub_transactions:
-            root.append(sub_transaction)
+            root.append(sub_transaction.xml_element())
         return root
 
 
