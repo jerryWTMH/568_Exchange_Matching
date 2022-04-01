@@ -21,7 +21,6 @@ class Position:
         return "Position"
 
     def toSQL(self, conn):
-        print("Inside of Position toSQL")
         sql = "INSERT INTO POSITION(account_id, symbol, shares) VALUES(" + self.account_id + " , '" + self.sym + "', " + self.shares + ");"
         cur = conn.cursor()
         cur.execute(sql)
@@ -42,7 +41,6 @@ class Account:
         return "Account"
 
     def toSQL(self, conn):
-        print("Inside of Account toSQL")
         sql = "INSERT INTO ACCOUNT(account_id, balance) VALUES(" + self.account_id + " , " + self.balance + ");"
         cur = conn.cursor()
         cur.execute(sql)
@@ -66,8 +64,7 @@ class Order:
         return "Order"
 
     def toSQL(self, conn):
-        print("Inside of Order toSQL")
-        sql = "INSERT INTO TRANSACTION(account_id, alive, amount, limitation, symbol) VALUES(" + self.account_id + " , " + "TRUE" + " , " + self.amount + " , " + self.limit + " , '" + self.symbol + "');" 
+        sql = "INSERT INTO TRANSACTION(account_id, alive, amount, limitation, symbol) VALUES(" + self.account_id + " , " + "TRUE" + " , " + self.amount + " , " + self.limit + " , '" + self.symbol + "');"
         cur = conn.cursor()
         cur.execute(sql)
 
@@ -130,7 +127,6 @@ class Cancel:
         return "Cancel"
 
     def toSQL(self, conn):
-        print("Inside of Cancel toSQL")
         cur = conn.cursor()
         cur.execute("SELECT account_id FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + self.transaction_id + ";")
         result = cur.fetchone()
@@ -148,7 +144,6 @@ class Cancel:
         cur.execute(sql)
         sql = "DELETE FROM HISTORY WHERE HISTORY.transaction_id = " + self.transaction_id + " AND HISTORY.status = 'open' AND HISTORY.symbol = '" + symbol + "' AND HISTORY.price = " + str(price) + "AND HISTORY.history_shares = " + str(history_shares) +  ";"
         cur.execute(sql)
-        print("$$$$$$$$$$$$$$$$DELETE###################")
         sql = "INSERT INTO HISTORY(transaction_id, account_id, status, history_shares, price, symbol) VALUES(" + str(self.transaction_id) + " , " + str(account_id) + " , '" + "cancel" + "' , " + str(history_shares) + " , " + str(price) + " , '" + symbol + "');"
         cur.execute(sql)
         conn.commit()

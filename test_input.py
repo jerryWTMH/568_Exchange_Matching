@@ -163,6 +163,12 @@ def one_cancel(transaction_id:str,account_id:str):
     transaction_request = TransactionRequest(account_id,transactions)
     return etree.tostring(transaction_request.xml_element(), pretty_print=True).decode('UTF-8')
 
+def one_query(transaction_id:str):
+    transactions = []
+    transactions.append(QueryRequest(transaction_id))
+    transaction_request = TransactionRequest(transaction_id, transactions)
+    return etree.tostring(transaction_request.xml_element(), pretty_print=True).decode('UTF-8')
+
 #
 # def create_order_testcase():
 #     transactions = []

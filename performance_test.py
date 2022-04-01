@@ -1,5 +1,6 @@
 import socket
 import time
+import datetime
 
 from xml_parser import parse_xml
 import test_input
@@ -7,8 +8,6 @@ import test_input
 def send(s, msg):
     msg = str(len(msg)) + '\r\n' + msg
     msg = str.encode(msg, 'utf-8')
-    print(msg)
-    print("is sent")
     s.send(msg)
 
 
@@ -23,30 +22,34 @@ if __name__ == '__main__':
         send(s,msg)
         # s.recv()
         #__________________________________________________________________________________________________
+        counter = 0
+        start_time = datetime.datetime.now()
         msg = test_input.one_order("1", "TESLA", "-500", "12")
         send(s, msg)
-        msg = test_input.one_order("2", "TESLA", "300", "13")
-        send(s, msg)
-        msg = test_input.one_cancel(transaction_id="1",account_id="1")
-        send(s, msg)
-        msg = test_input.one_query("1")
-        send(s, msg)
         msg = "This is the end!"
-        send(s,msg)
-
+        send(s, msg)
         server_msg = s.recv(2048)
-        print(server_msg.decode('UTF-8'))
+        while True:
+            print("This is a new round")
+            #
+            # msg = test_input.one_order("1", "TESLA", "500", "12")
+            # send(s, msg)
+            # msg = test_input.one_order("1", "APPLE", "500", "12")
+            # send(s, msg)
+            # msg = test_input.one_order("1", "APPLE", "-500", "12")
+            # send(s, msg)
+            msg = test_input.one_query("1")
+            send(s, msg)
+            msg = "This is the end!"
+            send(s, msg)
 
-        server_msg = s.recv(2048)
-        print(server_msg.decode('UTF-8'))
+            server_msg = s.recv(10000)
+            #
+            # server_msg = s.recv(2048)
+            #
+            # server_msg = s.recv(2048)
+            #
+            # server_msg = s.recv(2048)
 
-        server_msg = s.recv(2048)
-        print(server_msg.decode('UTF-8'))
-
-        server_msg = s.recv(2048)
-        print(server_msg.decode('UTF-8'))
-
-        server_msg = s.recv(2048)
-        print(server_msg.decode('UTF-8'))
 
     except Exception as e: print(e)

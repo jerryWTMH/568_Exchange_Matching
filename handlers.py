@@ -58,7 +58,6 @@ def increase_balance_sell(conn, shares, price,  new_account_id ):
     
 
 def order_handler(execution:parser.Order,conn):
-    print("Inside of Order Handler")
     cur = conn.cursor()
     sql = "SELECT * FROM ACCOUNT WHERE EXISTS(SELECT account_id FROM ACCOUNT WHERE ACCOUNT.account_id = " + execution.account_id + ");"
     cur.execute(sql)
@@ -68,6 +67,7 @@ def order_handler(execution:parser.Order,conn):
         return res.ErrorResponse({"sym": execution.symbol, "amount": execution.amount, "limit": execution.limit}, error)
     else:
         account_id = execution.account_id
+        server_response = None
         if (int(execution.amount) > 0):
             ######---------------------------------- Buying----------------------------------------######
             sql = "SELECT balance FROM ACCOUNT WHERE ACCOUNT.account_id = " + account_id + ";"
@@ -77,7 +77,7 @@ def order_handler(execution:parser.Order,conn):
                 error = "The limitation of the order is higher than your balance!"
                 print("error occurs in Order! ", error)
                 return res.ErrorResponse({"sym": execution.symbol, "amount": execution.amount, "limit": execution.limit}, error)
-            
+
             #Deduct the Balance first
             sql = "UPDATE ACCOUNT SET balance = " + str(result[0] - (int(execution.limit) * int(
                 execution.amount))) + " WHERE ACCOUNT.account_id = '" + execution.account_id + "' ;"
@@ -90,6 +90,7 @@ def order_handler(execution:parser.Order,conn):
             cur.execute(sql)
             result = cur.fetchone()
             new_transaction_id = str(result[0])
+            server_response =  res.OrderResponse({"sym":execution.symbol,"amount":execution.amount,"limit":execution.limit,"id":new_transaction_id})
             sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + account_id + ", " + new_transaction_id + ", '" + "open" + "', " + "now()" + ", " + execution.amount + ", " + execution.limit + ", '" + execution.symbol + "');"
 
             cur.execute(sql)
@@ -99,7 +100,7 @@ def order_handler(execution:parser.Order,conn):
             sql = "SELECT * FROM TRANSACTION WHERE TRANSACTION.alive = TRUE AND TRANSACTION.symbol = '" + execution.symbol + "'AND TRANSACTION.limitation <= '" + execution.limit + "'AND TRANSACTION.amount < 0  ORDER BY TRANSACTION.create_time ASC;"
             cur.execute(sql)
             sell_orders = cur.fetchall()
-            
+
             executed_shares = 0
             for sell_order in sell_orders:
                 old_transaction_id = str(sell_order[0])
@@ -178,8 +179,8 @@ def order_handler(execution:parser.Order,conn):
                         # Increase Balance for old account
                         increase_balance_buy(conn, int(execution.amount), old_price, old_account_id)
                         execution.amount = str(0)
-            position_buy_update(execution, conn, executed_shares)   
-            return res.OrderResponse({"sym":execution.symbol,"amount":execution.amount,"limit":execution.limit,"id":new_transaction_id})
+            position_buy_update(execution, conn, executed_shares)
+            return server_response
         else:
             ######---------------------------------- Selling----------------------------------------######
             shares = execution.amount
@@ -200,6 +201,8 @@ def order_handler(execution:parser.Order,conn):
             cur.execute(sql)
             result = cur.fetchone()
             new_transaction_id = str(result[0])
+            server_response =  res.OrderResponse({"sym":execution.symbol,"amount":execution.amount,"limit":execution.limit,"id":new_transaction_id})
+
             sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + account_id + "," + new_transaction_id + "," + "'open'" + "," + "now()" + "," + execution.amount + "," + execution.limit + ", '" + execution.symbol + "');"
             cur.execute(sql)
             conn.commit()
@@ -293,8 +296,7 @@ def order_handler(execution:parser.Order,conn):
                         execution.amount = str(0)
                         ###Update Position
                         position_sell_update(execution, conn, executed_shares, old_account_id)
-            return res.OrderResponse({"sym":execution.symbol,"amount":execution.amount,"limit":execution.limit,"id":new_transaction_id})
-
+            return server_response
 def account_handler(execution:parser.Account,conn):
     cur = conn.cursor()
     sql = "SELECT account_id FROM ACCOUNT WHERE account_id = " + execution.account_id + ";"

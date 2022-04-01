@@ -20,6 +20,8 @@ conn = psycopg2.connect(host="",database="MARKET",user="postgres",password="pass
 # create a cursor
 cur = conn.cursor()
 
+request_count = 0
+start_time = datetime.datetime.now()
 
 def drop_table(conn, cur):
     drops = "DROP TABLE IF EXISTS POSITION CASCADE; DROP TABLE IF EXISTS HISTORY CASCADE; DROP TABLE IF EXISTS TRANSACTION CASCADE; DROP TABLE IF EXISTS ACCOUNT CASCADE; "
@@ -46,8 +48,6 @@ class Buffer:
     def send_msg(self, msg):
         msg = str(len(msg)) + '\r\n' + msg
         msg = str.encode(msg, 'utf-8')
-        print(msg)
-        print("is sent to client")
         self.sock.send(msg)
 
 
@@ -64,7 +64,6 @@ def server_handler(executions, conn, cur):
         sql = ""
         error = ""
         className = execution.getClassName()
-        print("ClassName: ", className)
         if className == "Order":
             order_msg = handlers.order_handler(execution,conn)
             msgs.append(order_msg)
@@ -98,6 +97,8 @@ class ClientThread(threading.Thread, Buffer):
         self.thread_ID = thread_ID
 
     def run(self):
+        global request_count
+        global start_time
         print(self.thread_ID + " is running!")
         print("current process PID is : ", os.getpid())
         response_bytes_array = []
@@ -109,12 +110,20 @@ class ClientThread(threading.Thread, Buffer):
             if result == "This is the end!":
                 for sub_response in response_bytes_array:
                     self.buffer.send_msg(sub_response)
-                break
-            executions = parse_xml(result)
-            server_response = server_handler(executions, conn, cur)
-            response_xml = res.ResultWrapper(server_response)
-            response_bytes = etree.tostring(response_xml.xml_element(), pretty_print=True).decode('UTF-8')
-            response_bytes_array.append(response_bytes)
+                # break
+            else:
+                executions = parse_xml(result)
+                server_response = server_handler(executions, conn, cur)
+                response_xml = res.ResultWrapper(server_response)
+                response_bytes = etree.tostring(response_xml.xml_element(), pretty_print=True).decode('UTF-8')
+                response_bytes_array.append(response_bytes)
+                #This is for performance test
+                request_count = request_count+1
+                time_difference_seconds = (datetime.datetime.now() - start_time).seconds
+                if time_difference_seconds >= 1:
+                    start_time = datetime.datetime.now()
+                    print(request_count)
+
 
 def connect(commands):
     """ Connect to the PostgreSQL database server """
@@ -149,4 +158,5 @@ def connect(commands):
 if __name__ == '__main__':
     commands = create_tables()
     connect(commands)
+
 
