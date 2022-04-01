@@ -1,0 +1,18 @@
+version: '2'
+
+services:
+  db:
+    image: postgres
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=passw0rd
+  main:
+    build: ./
+    command: bash -c "./run.sh"
+    volumes:
+      - /var/log/erss
+    ports:
+      - "12345:12345"
+    depends_on:
+      - db
