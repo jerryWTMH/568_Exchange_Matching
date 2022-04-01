@@ -9,6 +9,9 @@ from xml_parser import parse_xml
 import handlers as handlers
 import xml_parser as parser
 
+from multiprocessing import Process
+import os
+
 # connect to the PostgreSQL server
 conn = psycopg2.connect(host="",database="MARKET",user="postgres",password="passw0rd")
         # create a cursor
@@ -89,7 +92,8 @@ class ClientThread(threading.Thread, Buffer):
         self.thread_ID = thread_ID
 
     def run(self):
-        print(self.thread_ID + "is running!")
+        print(self.thread_ID + " is running!")
+        print("current process PID is : ", os.getpid())
         while True:
             #continuously read requests from buffer
             result = self.buffer.get_content()
@@ -122,7 +126,9 @@ def connect(commands):
             buffer = Buffer(client_socket,serversocket)
             ct = ClientThread(buffer, str(thread_count))
             thread_count += 1
-            ct.run()
+            p = Process(target=ct.run())
+            p.start()
+            p.join()
 
         serversocket.close()
         print("close socket")

@@ -25,7 +25,7 @@ if __name__ == '__main__':
         #__________________________________________________________________________________________________
         msg = test_input.one_order("2", "TESLA", "900", "14")
         send(s, msg)
-
+        time.sleep(10)
         msg = test_input.one_order("1","TESLA","-500","15")
         send(s,msg)
 
@@ -34,11 +34,6 @@ if __name__ == '__main__':
 
         msg = test_input.one_order("1","APPLE","-200","10")
         send(s,msg)
-        
-        
-
-
-
 
 
 
