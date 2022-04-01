@@ -33,6 +33,29 @@ def position_sell_update(execution, conn, executed_shares, old_account_id ):
         cur.execute(sql)
     conn.commit()
     
+def increase_balance_buy(conn, shares, price,  old_account_id ):
+    cur = conn.cursor()
+    sql = "SELECT balance FROM ACCOUNT WHERE ACCOUNT.account_id = " + old_account_id + ";" 
+    cur.execute(sql)
+    result = cur.fetchone()
+    balance = result[0]
+    balance += shares * int(price)
+    sql = "UPDATE ACCOUNT SET balance = " + str(balance) + " WHERE ACCOUNT.account_id = " + old_account_id + " ;"
+    cur.execute(sql)
+    conn.commit()
+
+def increase_balance_sell(conn, shares, price,  new_account_id ):
+    cur = conn.cursor()
+    sql = "SELECT balance FROM ACCOUNT WHERE ACCOUNT.account_id = " + new_account_id + ";" 
+    cur.execute(sql)
+    result = cur.fetchone()
+    balance = result[0]
+    balance += shares * int(price)
+    sql = "UPDATE ACCOUNT SET balance = " + str(balance) + " WHERE ACCOUNT.account_id = " + new_account_id + " ;"
+    cur.execute(sql)
+    conn.commit()
+    
+    
 
 def order_handler(execution:parser.Order,conn):
     cur = conn.cursor()
@@ -45,7 +68,7 @@ def order_handler(execution:parser.Order,conn):
     else:
         account_id = execution.account_id
         if (int(execution.amount) > 0):
-            ### Buying
+            ######---------------------------------- Buying----------------------------------------######
             sql = "SELECT balance FROM ACCOUNT WHERE ACCOUNT.account_id = " + account_id + ";"
             cur.execute(sql)
             result = cur.fetchone()
@@ -53,7 +76,8 @@ def order_handler(execution:parser.Order,conn):
                 error = "The limitation of the order is higher than your balance!"
                 print("error occurs in Order! ", error)
                 return res.ErrorResponse({"sym": execution.symbol, "amount": execution.amount, "limit": execution.limit}, error)
-
+            
+            #Deduct the Balance first
             sql = "UPDATE ACCOUNT SET balance = " + str(result[0] - (int(execution.limit) * int(
                 execution.amount))) + " WHERE ACCOUNT.account_id = '" + execution.account_id + "' ;"
             cur.execute(sql)
@@ -103,6 +127,9 @@ def order_handler(execution:parser.Order,conn):
                         cur.execute(sql)
                         execution.amount = str(int(execution.amount)+old_amount)
                         executed_shares += -1 * old_amount
+                        # Increase Balance for old account
+                        increase_balance_buy(conn, -1 * old_amount, old_price, old_account_id )
+                        
                     elif (int(execution.amount) == -1 * old_amount):
                         ###(Old order) alive -> False
                         sql = "UPDATE TRANSACTION SET alive = FALSE WHERE TRANSACTION.transaction_id = '" + old_transaction_id + "';"
@@ -124,6 +151,8 @@ def order_handler(execution:parser.Order,conn):
                         cur.execute(sql)
                         execution.amount = str(0)
                         executed_shares += -1 * old_amount
+                        # Increase Balance for old account
+                        increase_balance_buy(conn, -1 * old_amount, old_price, old_account_id )
                         
                     elif (int(execution.amount) < -1 * old_amount):
                         ###(Old order) update open in HISTORY
@@ -145,11 +174,13 @@ def order_handler(execution:parser.Order,conn):
                         sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" +  execution.account_id + ", " + new_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + str(execution.amount) + ", " + old_price + ", '" + symbol + "');"
                         cur.execute(sql)
                         executed_shares += int(execution.amount)
+                        # Increase Balance for old account
+                        increase_balance_buy(conn, int(execution.amount), old_price, old_account_id)
                         execution.amount = str(0)
             position_buy_update(execution, conn, executed_shares)   
            
         else:
-            ### Selling
+            ######---------------------------------- Selling----------------------------------------######
             shares = execution.amount
             sql = "SELECT shares FROM POSITION WHERE POSITION.account_id = " + account_id + "AND POSITION.symbol = '" + execution.symbol + "' ;"
             cur.execute(sql)
@@ -201,6 +232,8 @@ def order_handler(execution:parser.Order,conn):
                         cur.execute(sql)
                         sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + execution.account_id + ", " + new_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + str(-1 * old_amount) + ", " + old_price + ",' " + symbol + "');"
                         cur.execute(sql)
+                        ### Increase balance for selling
+                        increase_balance_sell(conn, old_amount, old_price,  execution.account_id )
                         execution.amount = str(int(execution.amount)+old_amount)
                         executed_shares += old_amount
                         ###Update Position
@@ -226,6 +259,8 @@ def order_handler(execution:parser.Order,conn):
                         ###(New order) add executed to HISTORY
                         sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" +  execution.account_id + ", " + new_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + str(execution.amount) + ", " + old_price + ", '" + symbol + "');" 
                         cur.execute(sql)
+                        ### Increase balance for selling
+                        increase_balance_sell(conn, old_amount, old_price,  execution.account_id )
                         execution.amount = str(0)
                         executed_shares += old_amount
                         ###Update Position
@@ -250,6 +285,8 @@ def order_handler(execution:parser.Order,conn):
                         ###(New order) add executed to HISTORY
                         sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" +  execution.account_id + ", " + new_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + str(execution.amount) + ", " + old_price + ", '" + symbol + "');"
                         cur.execute(sql)
+                        ### Increase balance for selling
+                        increase_balance_sell(conn, -1 * int(execution.amount), old_price,  execution.account_id )
                         executed_shares += (-1 * int(execution.amount))
                         execution.amount = str(0)
                         ###Update Position
