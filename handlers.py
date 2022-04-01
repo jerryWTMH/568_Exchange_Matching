@@ -3,6 +3,37 @@ import psycopg2
 import xml_parser as parser
 import xml_generator as res
 
+
+def position_buy_update(execution, conn, executed_shares):
+    ### update the buyed shares into the buyer's account
+    cur = conn.cursor()
+    sql = "SELECT shares FROM POSITION WHERE account_id = '" + execution.account_id + "'AND POSITION.symbol = '" + execution.symbol+"';"
+    cur.execute(sql)
+    share_before_execution = cur.fetchone()
+    if share_before_execution is None:
+        #print("executed_shares: ", executed_shares)
+        sql = "INSERT INTO POSITION(account_id, symbol, shares) VALUES(" + execution.account_id +",'"+ execution.symbol+"'," + str(executed_shares) + ");"
+        cur.execute(sql)
+    else:
+        sql = "UPDATE POSITION SET SHARES = "+str(executed_shares + share_before_execution[0]) +"WHERE POSITION.account_id = '"+ execution.account_id+"'AND POSITION.symbol = '" + execution.symbol +"';"
+        cur.execute(sql)
+    conn.commit()
+
+def position_sell_update(execution, conn, executed_shares, old_account_id ):
+    cur = conn.cursor()
+    sql = "SELECT shares FROM POSITION WHERE account_id = " + old_account_id + " AND POSITION.symbol = '" + execution.symbol+"';"
+    cur.execute(sql)
+    share_before_execution = cur.fetchone()
+    if share_before_execution is None:
+        #print("executed_shares: ", executed_shares)
+        sql = "INSERT INTO POSITION(account_id, symbol, shares) VALUES(" + old_account_id +",'"+ execution.symbol+"'," + str(executed_shares) + ");"
+        cur.execute(sql)
+    else:
+        sql = "UPDATE POSITION SET SHARES = "+str(executed_shares + share_before_execution[0]) +"WHERE POSITION.account_id = "+ old_account_id + " AND POSITION.symbol = '" + execution.symbol +"';"
+        cur.execute(sql)
+    conn.commit()
+    
+
 def order_handler(execution:parser.Order,conn):
     cur = conn.cursor()
     sql = "SELECT * FROM ACCOUNT WHERE EXISTS(SELECT account_id FROM ACCOUNT WHERE ACCOUNT.account_id = " + execution.account_id + ");"
@@ -43,6 +74,7 @@ def order_handler(execution:parser.Order,conn):
             sql = "SELECT * FROM TRANSACTION WHERE TRANSACTION.symbol = '" + execution.symbol + "'AND TRANSACTION.limitation <= '" + execution.limit + "'AND TRANSACTION.amount < 0  ORDER BY TRANSACTION.create_time ASC;"
             cur.execute(sql)
             sell_orders = cur.fetchall()
+            
             executed_shares = 0
             for sell_order in sell_orders:
                 old_transaction_id = str(sell_order[0])
@@ -76,7 +108,7 @@ def order_handler(execution:parser.Order,conn):
                         sql = "UPDATE TRANSACTION SET alive = FALSE WHERE TRANSACTION.transaction_id = '" + old_transaction_id + "';"
                         cur.execute(sql)
                         ###(Old order) delete open in HISTORY
-                        sql = "DELETE FROM HISTORY WHERE HISTORY.transaction_id = " + old_transaction_id + " AND HISTORY.status = 'open' AND HISTORY.symbol = '" + symbol + "' AND HISTORY.price = " + old_price + "AND HISTORY.history_shares = " + old_amount +  ";"
+                        sql = "DELETE FROM HISTORY WHERE HISTORY.transaction_id = " + old_transaction_id + " AND HISTORY.status = 'open' AND HISTORY.symbol = '" + symbol + "' AND HISTORY.price = " + old_price + "AND HISTORY.history_shares = " + str(old_amount) +  ";"
                         cur.execute(sql)
                         ###(Old order) add executed in HISTORY
                         sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + old_account_id + ", " + old_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + str(old_amount) + ", " + old_price + ", '" + symbol + "');"
@@ -114,17 +146,8 @@ def order_handler(execution:parser.Order,conn):
                         cur.execute(sql)
                         executed_shares += int(execution.amount)
                         execution.amount = str(0)
-            ## update the buyed shares into the buyer's account
-            sql = "SELECT shares FROM POSITION WHERE account_id = '" + execution.account_id + "'AND POSITION.symbol = '" + execution.symbol+"';"
-            cur.execute(sql)
-            share_before_execution = cur.fetchone()
-            if share_before_execution is None:
-                sql = "INSERT INTO POSITION(account_id, symbol, shares) VALUES(" + execution.account_id +",'"+ execution.symbol+"'," + str(executed_shares) + ");"
-                cur.execute(sql)
-            else:
-                sql = "UPDATE POSITION SET SHARES = "+str(executed_shares + share_before_execution[0]) +"WHERE POSITION.account_id = '"+ execution.account_id+"'AND POSITION.symbol = '" + execution.symbol +"';"
-                cur.execute(sql)
-            conn.commit()
+            position_buy_update(execution, conn, executed_shares)   
+           
         else:
             ### Selling
             shares = execution.amount
@@ -171,22 +194,25 @@ def order_handler(execution:parser.Order,conn):
                         sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + old_account_id + ", " + old_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + str(old_amount) + ", " + old_price + ", '" + symbol + "');"
                         cur.execute(sql)
                         ###(New order) add executed to HISTORY
-                        sql = "UPDATE HISTORY SET history_shares = " + str(int(execution.amount) + old_amount) + " WHERE HISTORY.account_id = " +  execution.account_id + " AND HISTORY.status = 'open' AND HISTORY.symbol = " + symbol + " AND HISTORY.price = " + str(execution.limit) + ";"
+                        sql = "UPDATE HISTORY SET history_shares = " + str(int(execution.amount) + old_amount) + " WHERE HISTORY.account_id = " +  execution.account_id + " AND HISTORY.status = 'open' AND HISTORY.symbol = '" + symbol + "' AND HISTORY.price = " + str(execution.limit) + ";"
                         cur.execute(sql)
                         ### the new order's amount should be deducted
                         sql = "UPDATE TRANSACTION SET amount =" + str(int(execution.amount) + old_amount) + "WHERE TRANSACTION.transaction_id = " + new_transaction_id + ";"
                         cur.execute(sql)
-                        sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + execution.account_id + ", " + new_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + str(old_amount) + ", " + old_price + ",' " + symbol + "');"
+                        sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + execution.account_id + ", " + new_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + str(-1 * old_amount) + ", " + old_price + ",' " + symbol + "');"
                         cur.execute(sql)
                         execution.amount = str(int(execution.amount)+old_amount)
                         executed_shares += old_amount
+                        ###Update Position
+                        position_sell_update(execution, conn, executed_shares, old_account_id)
+
                         
                     elif (-1 * int(execution.amount) == old_amount):
                          ###(Old order) alive -> False
                         sql = "UPDATE TRANSACTION SET alive = FALSE WHERE TRANSACTION.transaction_id = '" + old_transaction_id + "';"
                         cur.execute(sql)
                         ###(Old order) delete open in HISTORY
-                        sql = "DELETE FROM HISTORY WHERE HISTORY.transaction_id = " + old_transaction_id + " AND HISTORY.status = open AND HISTORY.symbol = '" + symbol + "' AND HISTORY.price = " + old_price + "AND HISTORY.history_shares = " + str(old_amount) +  ";"
+                        sql = "DELETE FROM HISTORY WHERE HISTORY.transaction_id = " + old_transaction_id + " AND HISTORY.status = 'open' AND HISTORY.symbol = '" + symbol + "' AND HISTORY.price = " + old_price + "AND HISTORY.history_shares = " + str(old_amount) +  ";"
                         cur.execute(sql)
                         ###(Old order) add executed in HISTORY
                         sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" + old_account_id + ", " + old_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + str(old_amount) + ", " + old_price + ", '" + symbol + "');"
@@ -201,6 +227,9 @@ def order_handler(execution:parser.Order,conn):
                         sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" +  execution.account_id + ", " + new_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + str(execution.amount) + ", " + old_price + ", '" + symbol + "');" 
                         cur.execute(sql)
                         execution.amount = str(0)
+                        executed_shares += old_amount
+                        ###Update Position
+                        position_sell_update(execution, conn, executed_shares, old_account_id)
                         
                     elif (-1 * int(execution.amount) < old_amount):
                         ###(Old order) update open in HISTORY
@@ -221,7 +250,11 @@ def order_handler(execution:parser.Order,conn):
                         ###(New order) add executed to HISTORY
                         sql = "INSERT INTO HISTORY(account_id, transaction_id, status, history_time, history_shares, price, symbol) VALUES(" +  execution.account_id + ", " + new_transaction_id + ", " + "'executed'" + ", " + "now()" + ", " + str(execution.amount) + ", " + old_price + ", '" + symbol + "');"
                         cur.execute(sql)
+                        executed_shares += (-1 * int(execution.amount))
                         execution.amount = str(0)
+                        ###Update Position
+                        position_sell_update(execution, conn, executed_shares, old_account_id)
+                        
 
 
 def account_handler(execution:parser.Account,conn):
