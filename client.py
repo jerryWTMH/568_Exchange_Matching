@@ -19,13 +19,15 @@ if __name__ == '__main__':
         # now connect to the web server on port 80 - the normal http port
         s.connect(("localhost", 12345))
         msg = test_input.create_account_testcase()
-
+        # msg = test_input.create_account_error()
         send(s,msg)
         # s.recv()
         #__________________________________________________________________________________________________
         msg = test_input.one_order("2", "TESLA", "300", "14")
         send(s, msg)
-        time.sleep(10)
+        msg = test_input.one_cancel("1")
+        send(s, msg)
+        # # time.sleep(10)
         msg = test_input.one_order("1","TESLA","-500","15")
         send(s,msg)
 
@@ -40,6 +42,8 @@ if __name__ == '__main__':
         msg = "This is the end!"
         send(s,msg)
 
+        # s.close()
+        server_msg = s.recv(1024)
+        print(server_msg.decode('UTF-8'))
         s.close()
-        print("done")
     except Exception as e: print(e)

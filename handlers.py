@@ -188,6 +188,7 @@ def order_handler(execution:parser.Order,conn):
             if (result[0] < -int(execution.amount)):
                 error = "The amount of selling is higher than you own!"
                 print("error occurs in Order! ", error)
+                return res.ErrorResponse({"sym": execution.symbol, "amount": execution.amount, "limit": execution.limit}, error)
             sql = "UPDATE POSITION SET shares = " + str(result[0]+int(execution.amount)) + " WHERE POSITION.account_id = '" + execution.account_id + "' AND symbol = '"+ execution.symbol+ "';"
             cur.execute(sql)
             ### add to TRANSACTIOn and HISTORY first
@@ -302,10 +303,8 @@ def account_handler(execution:parser.Account,conn):
         error = "The account_id Already Existed"
         print("error occurs in Account Init! ", error)
         return res.ErrorResponse({"id": execution.account_id}, error)
-        # break
     execution.toSQL(conn)
     return res.CreateResponse(execution.account_id)
-    # msgs.append(execution.toSQL(conn))\
 
 
 def position_handler(execution:parser.Position,conn):
@@ -316,7 +315,7 @@ def position_handler(execution:parser.Position,conn):
     if (cur.rowcount == 0):
         error = "The account_id doesn't exist!"
         print("error occurs in Position! ", error)
-        return res.ErrorResponse({"id":execution.account_id,"sym":execution.sym})
+        return res.ErrorResponse({"id":execution.account_id,"sym":execution.sym},error)
     ### if there is not errorin current execution: call toSQL()
     execution.toSQL(conn)
     return res.CreateResponse(execution.account_id,execution.sym)
@@ -352,8 +351,5 @@ def cancel_handler(execution:parser.Cancel,conn):
     if(cur.rowcount == 0):
         error = "The transaction_id doesn't exist!"
         print("error occurs in Cancel! ", error)
-    ### if there is not errorin current execution: call toSQL()
-    if(error == ""):
-        execution.toSQL(conn)
-            ##else:
-                ##prepare xml error tag here
+        return res.ErrorResponse({"id":execution.transaction_id},error)
+    execution.toSQL(conn)

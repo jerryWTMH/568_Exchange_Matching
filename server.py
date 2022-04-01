@@ -12,11 +12,15 @@ import xml_parser as parser
 import multiprocessing as mp
 from multiprocessing import Process, Pool
 import os
+from lxml import etree
+
 
 # connect to the PostgreSQL server
 conn = psycopg2.connect(host="",database="MARKET",user="postgres",password="passw0rd")
-        # create a cursor
+# create a cursor
 cur = conn.cursor()
+
+
 def drop_table(conn, cur):
     drops = "DROP TABLE IF EXISTS POSITION CASCADE; DROP TABLE IF EXISTS HISTORY CASCADE; DROP TABLE IF EXISTS TRANSACTION CASCADE; DROP TABLE IF EXISTS ACCOUNT CASCADE; "
     cur.execute(drops)
@@ -44,7 +48,7 @@ class Buffer:
         msg = str.encode(msg, 'utf-8')
         print(msg)
         print("is sent to client")
-        self.client.send(msg)
+        self.sock.send(msg)
 
 
 def server_handler(executions, conn, cur):
@@ -101,10 +105,13 @@ class ClientThread(threading.Thread, Buffer):
             if result is None:
                 continue
             if result == "This is the end!":
+                # result_xml = res.ResultWrapper(results)
+                # result_bytes = etree.tostring(result_xml.xml_element(), pretty_print=True).decode('UTF-8')
+                # self.buffer.send_msg(result_bytes)
                 break
             executions = parse_xml(result)
-            print(executions)
             results = server_handler(executions, conn, cur)
+
 
 def connect(commands):
     """ Connect to the PostgreSQL database server """
@@ -122,15 +129,6 @@ def connect(commands):
         serversocket.listen(2)
         # accept connections from outside
         thread_count = 0
-        # while True:
-        #     client_socket, address = serversocket.accept()
-        #     buffer = Buffer(client_socket,serversocket)
-        #     ct = ClientThread(buffer, str(thread_count))
-        #     thread_count += 1
-        #     p = Process(target=ct.run(),)
-        #     p.start()
-        #     p.join()
-        
         with Pool(processes = 4) as pool:
             while True:
                 client_socket, address = serversocket.accept()
@@ -138,11 +136,9 @@ def connect(commands):
                 ct = ClientThread(buffer, str(thread_count))
                 thread_count += 1
                 pool.apply_async(ct.run())
-
         serversocket.close()
         print("close socket")
 
-	    # close the communication with the PostgreSQL
         cur.close()
         conn.close()
         print('Database connection closed.')

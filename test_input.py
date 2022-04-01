@@ -95,6 +95,25 @@ class CancelRequest:
         root.set('cancel',self.transaction_id)
         return root
 
+def create_account_error():
+    # msg = "INSERT INTO ACCOUNT(account_id, balance) VALUES(888, 10000);"
+    account_requests = []
+    # acccount 1 has 10000 balance and 1000 shares of tesla and 2000 shares of apple
+    account_requests.append(AccountRequest("1", "10000"))
+    saving_1_1 = [Saving("3", "1000")]
+    saving_1_2 = [Saving("3", "2000")]
+    account_requests.append(PositionRequest("TESLA", saving_1_1))
+    account_requests.append(PositionRequest("APPLE", saving_1_2))
+    # account 2 has 5000 balance and 5000 shares of META and 5000 shares of AMAZON
+    account_requests.append(AccountRequest("2", "50000"))
+    account_requests.append(AccountRequest("2", "50000"))
+    saving_2_1 = [Saving("3", "5000")]
+    saving_2_2 = [Saving("3", "5000")]
+    account_requests.append(PositionRequest("META", saving_2_1))
+    account_requests.append(PositionRequest("AMAZ", saving_2_2))
+    create_request = CreateRequest(account_requests)
+    return etree.tostring(create_request.xml_element(), pretty_print=True).decode('UTF-8')
+
 
 def create_account_testcase():
     # msg = "INSERT INTO ACCOUNT(account_id, balance) VALUES(888, 10000);"
@@ -138,6 +157,9 @@ def one_order(account_id:str,sym:str,amount:str,limit:str):
     transaction_request = TransactionRequest(account_id, transactions)
     return etree.tostring(transaction_request.xml_element(), pretty_print=True).decode('UTF-8')
 
+def one_cancel(transaction_id:str):
+    cancel_request = CancelRequest(transaction_id)
+    return etree.tostring(cancel_request.xml_element(), pretty_print=True).decode('UTF-8')
 
 #
 # def create_order_testcase():
