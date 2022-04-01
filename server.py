@@ -99,8 +99,8 @@ class ClientThread(threading.Thread, Buffer):
     def run(self):
         global request_count
         global start_time
-        print(self.thread_ID + " is running!")
-        print("current process PID is : ", os.getpid())
+        # print(self.thread_ID + " is running!")
+        # print("current process PID is : ", os.getpid())
         response_bytes_array = []
         while True:
             #continuously read requests from buffer
@@ -111,7 +111,7 @@ class ClientThread(threading.Thread, Buffer):
                 for sub_response in response_bytes_array:
                     self.buffer.send_msg(sub_response)
                     response_bytes_array = []
-                # break
+                break
             else:
                 executions = parse_xml(result)
                 server_response = server_handler(executions, conn, cur)
