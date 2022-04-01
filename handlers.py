@@ -331,17 +331,10 @@ def query_handler(execution:parser.Query,conn):
         error = "The transaction_id doesn't exist!"
         print("error occurs in Query! ", error)
         return res.ErrorResponse({"id":execution.transaction_id})
-    ### if there is not errorin current execution: call toSQL()
-    sql = "SELECT * FROM TRANSACTION WHERE TRANSACTION.transaction_id = " + str(execution.transaction_id) + ";"
-    print(sql)
-    cur = conn.cursor()
-    cur.execute(sql)
-    query_results = cur.fetchall()
-    # sub_transactions = []
-    # for query_result in query_results:
-    #     sub_transactions.append(res.SubTransaction(query_result[]))
-    #TODO
-    return res.QueryResponse()
+    query_helper = parser.QueryHelper(execution.transaction_id,conn)
+    query_results = query_helper.query()
+
+    return res.QueryResponse(execution.transaction_id, query_results)
 
 
 def cancel_handler(execution:parser.Cancel,conn):
@@ -354,7 +347,7 @@ def cancel_handler(execution:parser.Cancel,conn):
         print("error occurs in Cancel! ", error)
         return res.ErrorResponse({"id":execution.transaction_id},error)
     execution.toSQL(conn)
-    # queryHelper = parser.QueryHelper(execution.transaction_id,conn)
-    # queryresults = queryHelper.query()
+    query_helper = parser.QueryHelper(execution.transaction_id,conn)
+    query_results = query_helper.query()
 
-    return res.CancelResponse()
+    return res.CancelResponse(execution.transaction_id, query_results)

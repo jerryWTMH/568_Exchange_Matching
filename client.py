@@ -23,22 +23,12 @@ if __name__ == '__main__':
         send(s,msg)
         # s.recv()
         #__________________________________________________________________________________________________
-        msg = test_input.one_order("2", "TESLA", "300", "1")
+        msg = test_input.one_order("1", "TESLA", "-500", "12")
         send(s, msg)
-        msg = test_input.one_order("1")
-        msg = test_input.one_cancel(transaction_id="1",account_id="2")
+        msg = test_input.one_order("2", "TESLA", "300", "13")
         send(s, msg)
-        time.sleep(3)
-        msg = test_input.one_order("1","TESLA","-500","15")
-        send(s,msg)
-
-        msg = test_input.one_order("1","TESLA","-300","12")
-        send(s,msg)
-
-        msg = test_input.one_order("1","APPLE","-200","10")
-        send(s,msg)
-
-
+        msg = test_input.one_cancel(transaction_id="1",account_id="1")
+        send(s, msg)
 
         msg = "This is the end!"
         send(s,msg)
