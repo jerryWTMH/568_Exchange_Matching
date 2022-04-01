@@ -10,7 +10,7 @@ import handlers as handlers
 import xml_parser as parser
 
 import multiprocessing as mp
-from multiprocessing import Process, Pool
+from multiprocessing import Process, Pool,Lock
 import os
 from lxml import etree
 
@@ -110,6 +110,7 @@ class ClientThread(threading.Thread, Buffer):
             if result == "This is the end!":
                 for sub_response in response_bytes_array:
                     self.buffer.send_msg(sub_response)
+                    response_bytes_array = []
                 # break
             else:
                 executions = parse_xml(result)
@@ -120,7 +121,7 @@ class ClientThread(threading.Thread, Buffer):
                 #This is for performance test
                 request_count = request_count+1
                 time_difference_seconds = (datetime.datetime.now() - start_time).seconds
-                if time_difference_seconds >= 1:
+                if time_difference_seconds >= 5:
                     start_time = datetime.datetime.now()
                     print(request_count)
 
@@ -138,7 +139,7 @@ def connect(commands):
         # bind the socket to a public host, and a well-known port
         serversocket.bind(("localhost", 12345))
         # become a server socket
-        serversocket.listen(2)
+        serversocket.listen(10)
         # accept connections from outside
         thread_count = 0
         with Pool(processes = 4) as pool:
@@ -158,5 +159,6 @@ def connect(commands):
 if __name__ == '__main__':
     commands = create_tables()
     connect(commands)
+
 
 
