@@ -25,7 +25,8 @@ if __name__ == '__main__':
         #__________________________________________________________________________________________________
         msg = test_input.one_order("2", "TESLA", "300", "14")
         send(s, msg)
-        msg = test_input.one_cancel("1")
+        msg = test_input.one_order("1")
+        msg = test_input.one_cancel(transaction_id="1",account_id="2")
         send(s, msg)
         # # time.sleep(10)
         msg = test_input.one_order("1","TESLA","-500","15")

@@ -81,7 +81,7 @@ def server_handler(executions, conn, cur):
             msgs.append(query_msg)
 
         elif className == "Cancel":
-            query_msg = handlers.query_handler(execution,conn)
+            query_msg = handlers.cancel_handler(execution,conn)
             msgs.append(query_msg)
         # try to add some XML information to return_executions
         conn.commit()

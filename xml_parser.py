@@ -2,6 +2,7 @@ from io import BytesIO
 
 from lxml import etree
 import psycopg2
+import xml_generator as xml_generator
 
 
 class Position:
@@ -79,7 +80,34 @@ class Order:
         conn.commit()
 
         
+class QueryHelper:
+    def __init__(self, transaction_id, conn):
+        self.transaction_id = transaction_id
+        self.conn = conn
+        self.query_results = []
 
+    def query(self):
+        sql = "SELECT * FROM HISTORY WHERE transaction_id =" + self.transaction_id;
+        cur = self.conn.cursor()
+        cur.execute(sql)
+        history_results = cur.fetchall()
+        for history_result in history_results:
+            status = history_result[3]
+            share = history_result[6]
+            time = history_result[5]
+            price = history_result[7]
+            if status == "open":
+                open_sub_transaction = xml_generator.SubTransaction("Open",share,price,time)
+                self.query_results.append(open_sub_transaction)
+            elif status == "cancel":
+                cancel_transaction = xml_generator.SubTransaction("Cancel",share,price,time)
+                self.query_results.append(cancel_transaction)
+            elif status == "executed":
+                executed_transaction = xml_generator.SubTransaction("Executed",share,price,time)
+                self.query_results.append(executed_transaction)
+        return self.query_results
+    # return list of subtransactions
+    # eg:[open,cancel,executed]
 
 class Query:
     def __init__(self, transaction_id):
@@ -90,9 +118,6 @@ class Query:
 
     def getClassName(self):
         return "Query"
-    # def toSQL(self, conn):
-
-
 
 class Cancel:
     def __init__(self, transaction_id):
@@ -124,6 +149,7 @@ class Cancel:
         sql = "INSERT INTO HISTORY(transaction_id, account_id, status, history_shares, price, symbol) VALUES(" + str(self.transaction_id) + " , " + str(account_id) + " , '" + "cancel" + "' , " + str(history_shares) + " , " + str(price) + " , '" + symbol + "');"
         cur.execute(sql)
         conn.commit()
+
 
 
 class Execution:
@@ -187,28 +213,4 @@ def parse_xml(recv_string):
                 cancel = Cancel(id)
                 execution.executions.append(cancel)
     return execution
-
-
-# this is used for test
-if __name__ == '__main__':
-    create_string = "<create> " \
-                  "<account id=\"123456\" balance=\"1000\"/>" \
-                      "<symbol sym=\"SPY\">" \
-                      "<account id=\"123456\">100000</account>" \
-                      "</symbol>" \
-                      "<symbol sym=\"NASDAQ\">" \
-                      "<account id=\"654321\">50</account>" \
-                      "</symbol>" \
-                  "<account id=\"13579\" balance=\"10000\"/>" \
-                    "</create>"
-    create_execution = parse_xml(create_string)
-    print(create_execution)
-    transaction_string = "<transactions id=\"123456\">" \
-                            "<order sym=\"SPY\" amount=\"123\" limit=\"321\"/>" \
-                            "<query id=\"1\"/>" \
-                            "<cancel id=\"1\"/>" \
-                          "</transactions> "
-    transaction_execution = parse_xml(transaction_string)
-    print(transaction_execution)
-
 

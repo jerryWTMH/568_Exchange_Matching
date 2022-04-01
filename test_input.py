@@ -92,7 +92,7 @@ class CancelRequest:
 
     def xml_element(self):
         root = etree.Element('cancel')
-        root.set('cancel',self.transaction_id)
+        root.set('id',self.transaction_id)
         return root
 
 def create_account_error():
@@ -157,9 +157,11 @@ def one_order(account_id:str,sym:str,amount:str,limit:str):
     transaction_request = TransactionRequest(account_id, transactions)
     return etree.tostring(transaction_request.xml_element(), pretty_print=True).decode('UTF-8')
 
-def one_cancel(transaction_id:str):
-    cancel_request = CancelRequest(transaction_id)
-    return etree.tostring(cancel_request.xml_element(), pretty_print=True).decode('UTF-8')
+def one_cancel(transaction_id:str,account_id:str):
+    transactions = []
+    transactions.append(CancelRequest(transaction_id))
+    transaction_request = TransactionRequest(account_id,transactions)
+    return etree.tostring(transaction_request.xml_element(), pretty_print=True).decode('UTF-8')
 
 #
 # def create_order_testcase():
