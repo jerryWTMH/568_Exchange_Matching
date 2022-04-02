@@ -136,14 +136,17 @@ def connect(commands, conn):
             cur.execute(command)
         print("start socket")
         serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        
         # bind the socket to a public host, and a well-known port
         serversocket.bind(("localhost", 12345))
+        
         # become a server socket
         serversocket.listen(10)
+        
         # accept connections from outside
         thread_count = 0
         with Pool(processes = 4) as pool:
-            while True:
+            while True:                
                 client_socket, address = serversocket.accept()
                 buffer = Buffer(client_socket,serversocket)
                 ct = ClientThread(buffer, str(thread_count))
@@ -157,14 +160,12 @@ def connect(commands, conn):
         print('Database connection closed.')
 
 if __name__ == '__main__':
-    # connect to the PostgreSQL server
     conn = psycopg2.connect(host="db",port=5432, user="postgres",password="passw0rd")
     conn.autocommit = True
     cur = conn.cursor()
-    cur.execute("DROP DATABASE IF EXISTS MARKET;")
-    cur.execute("CREATE DATABASE MARKET;")
-    conn.close()
-    conn = psycopg2.connect(host="db", port=5432, database="MARKET",user="postgres",password="passw0rd")
+    cur.execute("DROP DATABASE MARKET;")
+    cur.execute("CREATE DATABASE " + "MARKET" + ";")
+    conn = psycopg2.connect(host="db", port=5432, database="market",user="postgres",password="passw0rd")
     commands = create_tables()
     connect(commands, conn)
 
