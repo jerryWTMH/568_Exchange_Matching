@@ -18,10 +18,7 @@ import os
 from lxml import etree
 
 
-# connect to the PostgreSQL server
-conn = psycopg2.connect(host="",database="MARKET",user="postgres",password="passw0rd")
-# create a cursor
-cur = conn.cursor()
+
 
 request_count = 0
 start_time = datetime.datetime.now()
@@ -129,7 +126,7 @@ class ClientThread(threading.Thread, Buffer):
                     print(request_count)
 
 
-def connect(commands):
+def connect(commands, conn):
     """ Connect to the PostgreSQL database server """
     if True:
         # drop the table
@@ -160,8 +157,16 @@ def connect(commands):
         print('Database connection closed.')
 
 if __name__ == '__main__':
+    # connect to the PostgreSQL server
+    conn = psycopg2.connect(host="db",port=5432, user="postgres",password="passw0rd")
+    conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute("DROP DATABASE IF EXISTS MARKET;")
+    cur.execute("CREATE DATABASE MARKET;")
+    conn.close()
+    conn = psycopg2.connect(host="db", port=5432, database="MARKET",user="postgres",password="passw0rd")
     commands = create_tables()
-    connect(commands)
+    connect(commands, conn)
 
 
 
