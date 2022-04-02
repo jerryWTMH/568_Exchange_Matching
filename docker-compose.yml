@@ -2,17 +2,22 @@ version: '2'
 
 services:
   db:
-    image: postgres
+    image: postgres:14.1-alpine
+    restart: always
     environment:
-      - POSTGRES_DB=postgres
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=passw0rd
-  main:
-    build: ./
-    command: bash -c "./run.sh"
-    volumes:
-      - /var/log/erss
     ports:
-      - "12345:12345"
+      - '5432:5432'
+    volumes:
+      - db:/var/lib/postgresql/data
+  main:
+    build: ./src
+    command: ./run.sh
+    ports:
+      - '12345:12345'
     depends_on:
       - db
+volumes:
+  db:
+    driver: local
