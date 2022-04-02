@@ -146,6 +146,7 @@ def connect(commands, conn):
         # accept connections from outside
         thread_count = 0
         with Pool(processes = 4) as pool:
+            print("################")
             while True:                
                 client_socket, address = serversocket.accept()
                 buffer = Buffer(client_socket,serversocket)
