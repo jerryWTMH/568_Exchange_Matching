@@ -33,12 +33,12 @@ def demonstrate_valid_create_account_testcase():
     s.connect(("localhost", 12345))
     msg = test_input.create_account_testcase()
     buffer = Buffer(s, None)
-    print("This is the message sent", msg)
+    print("This is the message sent\n", msg)
     send(s, msg)
     msg = "This is the end!"
     send(s, msg)
     server_msg = buffer.get_content()
-    print("This is the response from server", server_msg)
+    print("This is the response from server\n", server_msg)
 
 def demonstrate_invalid_create_account_testcase():
     # create an INET, STREAMing socket
@@ -47,12 +47,12 @@ def demonstrate_invalid_create_account_testcase():
     s.connect(("localhost", 12345))
     msg = test_input.create_account_error()
     buffer = Buffer(s, None)
-    print("This is the message sent", msg)
+    print("This is the message sent\n", msg)
     send(s, msg)
     msg = "This is the end!"
     send(s, msg)
     server_msg = buffer.get_content()
-    print("This is the response from server", server_msg)
+    print("This is the response from server\n", server_msg)
 
 
 if __name__ == '__main__':
