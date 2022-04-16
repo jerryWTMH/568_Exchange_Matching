@@ -112,7 +112,7 @@ def create_account_error():
     account_requests.append(PositionRequest("META", saving_2_1))
     account_requests.append(PositionRequest("AMAZ", saving_2_2))
     create_request = CreateRequest(account_requests)
-    return etree.tostring(create_request.xml_element(), pretty_print=True).decode('UTF-8')
+    return etree.tostring(create_request.xml_element(),xml_declaration=True, pretty_print=True).decode('UTF-8')
 
 
 def create_account_testcase():
@@ -131,43 +131,43 @@ def create_account_testcase():
     account_requests.append(PositionRequest("META", saving_2_1))
     account_requests.append(PositionRequest("AMAZ", saving_2_2))
     create_request = CreateRequest(account_requests)
-    return etree.tostring(create_request.xml_element(), pretty_print=True).decode('UTF-8')
+    return etree.tostring(create_request.xml_element(),xml_declaration=True, pretty_print=True).decode('UTF-8')
 
 def order_account_non_exist_testcase():
     transactions = []
     transactions.append(OrderRequest("100", "100", "SYM"))
     transaction_request = TransactionRequest("10", transactions)
-    return etree.tostring(transaction_request.xml_element(), pretty_print=True).decode('UTF-8')
+    return etree.tostring(transaction_request.xml_element(),xml_declaration=True, pretty_print=True).decode('UTF-8')
 
 def simple_buy_order():
     transactions = []
     transactions.append(OrderRequest("100", "100", "SYM"))
     transaction_request = TransactionRequest("1", transactions)
-    return etree.tostring(transaction_request.xml_element(), pretty_print=True).decode('UTF-8')
+    return etree.tostring(transaction_request.xml_element(),xml_declaration=True, pretty_print=True).decode('UTF-8')
 
 def buy_order_exceed_limit():
     transactions = []
     transactions.append(OrderRequest("100", "1000", "SYM"))
     transaction_request = TransactionRequest("1", transactions)
-    return etree.tostring(transaction_request.xml_element(), pretty_print=True).decode('UTF-8')
+    return etree.tostring(transaction_request.xml_element(),xml_declaration=True, pretty_print=True).decode('UTF-8')
 
 def one_order(account_id:str,sym:str,amount:str,limit:str):
     transactions = []
     transactions.append(OrderRequest(amount, limit, sym))
     transaction_request = TransactionRequest(account_id, transactions)
-    return etree.tostring(transaction_request.xml_element(), pretty_print=True).decode('UTF-8')
+    return etree.tostring(transaction_request.xml_element(),xml_declaration=True, pretty_print=True).decode('UTF-8')
 
 def one_cancel(transaction_id:str,account_id:str):
     transactions = []
     transactions.append(CancelRequest(transaction_id))
     transaction_request = TransactionRequest(account_id,transactions)
-    return etree.tostring(transaction_request.xml_element(), pretty_print=True).decode('UTF-8')
+    return etree.tostring(transaction_request.xml_element(),xml_declaration=True, pretty_print=True).decode('UTF-8')
 
 def one_query(transaction_id:str):
     transactions = []
     transactions.append(QueryRequest(transaction_id))
     transaction_request = TransactionRequest(transaction_id, transactions)
-    return etree.tostring(transaction_request.xml_element(), pretty_print=True).decode('UTF-8')
+    return etree.tostring(transaction_request.xml_element(),xml_declaration=True, pretty_print=True).decode('UTF-8')
 
 #
 # def create_order_testcase():

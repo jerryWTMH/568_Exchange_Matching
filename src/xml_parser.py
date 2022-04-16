@@ -170,7 +170,8 @@ class Execution:
 
 def parse_xml(recv_string):
     # recv_string is the string received;
-    root = etree.fromstring(recv_string)
+    parser = etree.XMLParser(encoding="UTF-8")
+    root = etree.fromstring(recv_string.encode("UTF-8"),parser)
     # execution is the execution to be handled(create, transaction)
     execution = Execution()
     # classify by the root element

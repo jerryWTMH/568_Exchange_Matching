@@ -34,7 +34,7 @@ class CreateResponse:
         self.sym = sym
 
     def xml_element(self):
-        root = etree.Element('Created')
+        root = etree.Element('created')
         root.set("id", str(self.account_id))
         if self.sym is not None:
             root.set("sym", str(self.sym))

@@ -119,14 +119,20 @@ class ClientThread(threading.Thread, Buffer):
                 executions = parse_xml(result)
                 server_response = server_handler(executions, conn, cur)
                 response_xml = res.ResultWrapper(server_response)
-                response_bytes = etree.tostring(response_xml.xml_element(), pretty_print=True).decode('UTF-8')
+                response_bytes = etree.tostring(response_xml.xml_element(),xml_declaration=True,encoding='UTF-8', pretty_print=True).decode('UTF-8')
                 response_bytes_array.append(response_bytes)
+                print("---------------------response------------------------")
+                print(etree.tostring(response_xml.xml_element(), xml_declaration=True,encoding='UTF-8', pretty_print=True).decode('UTF-8'))
                 #This is for performance test
                 request_count = request_count+1
                 time_difference_seconds = (datetime.datetime.now() - start_time).seconds
                 if time_difference_seconds >= 1:
                     start_time = datetime.datetime.now()
                     print(request_count)
+
+                for sub_response in response_bytes_array:
+                    self.buffer.send_msg(sub_response)
+                    response_bytes_array = []
 
 
 def connect(commands):
